@@ -1,826 +1,249 @@
-# Reference Target Agent: Web Log Analysis Agent
+# Reference Target Agent: Web Log ReAct Agent
 
 ## 1. 목적
 
-이 문서는 simple Judge Agent가 LangChain/LangGraph 기반 agent의 drift를 탐지하기 위해 사용할 **테스트 겸 레퍼런스 대상 agent**를 정의한다.
+Judge Agent가 탐지/분석/리포팅할 대상은 단순 workflow가 아니라 **일반적인 LangChain/LangGraph 기반 AI Agent**다. 따라서 reference target agent도 다음 구성을 갖는 실제 동작 agent여야 한다.
 
-대상 agent는 **웹로그 분석 에이전트(Web Log Analysis Agent)**다.
+- LLM
+- Prompt / instruction set
+- Tools
+- MCP context
+- RAG retriever
+- LangGraph-style state graph
+- ReAct loop: Thought → Action → Observation → Final
+- 실행 trace / state snapshot / validation result
 
-이 agent는 웹서버 access log / error log를 분석하여 트래픽 이상, 에러율 증가, 의심스러운 IP, 특정 endpoint 장애, latency 증가 등을 탐지하고 요약 리포트를 생성한다.
+Reference domain은 웹로그 분석이다. 웹서버 access log를 분석해 endpoint별 에러율, latency, 이상 징후, 원인 후보, 권장 조치를 리포팅한다.
 
-Judge Agent는 이 reference agent의 실행 trace를 수집하여 다음 drift를 검증한다.
+## 2. Agent 이름
 
-- prompt/instruction drift
-- tool drift
-- context/retrieval drift
-- LangGraph node flow drift
-- state/memory drift
-- completion drift
+`weblog-react-agent`
 
-## 2. 왜 웹로그 분석 에이전트인가
-
-웹로그 분석은 agent drift 테스트에 적합하다.
-
-이유:
-
-- 입력 데이터가 구조적이다.
-- 정답 또는 기대 결과를 fixture로 만들기 쉽다.
-- tool 사용이 자연스럽다.
-- 단계별 workflow가 명확하다.
-- 잘못된 분석이 final report에 바로 드러난다.
-- LangGraph node 기반으로 구현하기 좋다.
-
-예상 작업 흐름:
+## 3. Agent 구성
 
 ```text
-사용자 요청
-  -> 로그 파일 확인
-  -> 로그 파싱
-  -> 기간/endpoint/IP 필터링
-  -> 통계 계산
-  -> 이상 징후 탐지
-  -> 근거 확인
-  -> 리포트 생성
+User Request
+  -> LangGraph StateGraph
+      -> initialize_agent
+      -> react_agent
+          -> LLM decides next action
+          -> tool / rag / mcp call
+          -> observation appended to state
+          -> repeat
+      -> validate_findings
+      -> finalize
+  -> Markdown Report + JSONL Trace
 ```
 
-## 3. Reference Agent 개요
+## 3.1 LLM
 
-## 3.1 Agent 이름
+역할:
 
-`weblog-analysis-agent`
+- 사용자 의도 해석
+- 다음 ReAct action 선택
+- 관찰 결과 기반 추론
+- 최종 리포트 생성
 
-## 3.2 Agent 역할
+환경변수:
 
-웹서버 로그를 분석하여 운영자가 빠르게 문제를 파악할 수 있도록 돕는 분석 agent.
+```bash
+OPENAI_API_KEY
+WEBLOG_AGENT_MODEL
+OPENAI_BASE_URL
+```
 
-## 3.3 주요 입력
+LLM이 없을 때도 fixture/CI를 위해 deterministic fallback policy로 동작한다. 단, trace에는 반드시 `llm_skipped`가 기록된다.
 
-- access log file
-- error log file
-- 분석 기간
-- 분석 대상 endpoint
-- 기준 threshold
-- baseline 통계
-- 사용자 질문
+## 3.2 Prompt
 
-예:
+Prompt는 drift 탐지 대상이다.
+
+구성:
+
+- `SYSTEM_PROMPT`
+- `REACT_PROTOCOL`
+- `TOOL_POLICY`
+- `OUTPUT_CONTRACT`
+
+Drift 예:
+
+- tool 사용 의무 삭제
+- evidence 없이 원인 단정 허용
+- output section 누락
+- RAG/MCP context를 measured evidence처럼 취급
+
+## 3.3 Tools
+
+Core tools:
+
+| Tool | 역할 |
+|---|---|
+| `parse_user_request` | targetPath, metric, status focus 추출 |
+| `read_log_file` | raw access log 로드 |
+| `parse_access_log` | raw line → structured record |
+| `filter_log_records` | endpoint/status/time filter |
+| `compute_log_metrics` | request_count, error_rate, latency percentile 계산 |
+| `detect_log_anomalies` | threshold/baseline 기반 이상 탐지 |
+| `collect_evidence` | representative log line / metric ref 수집 |
+
+Tool drift 예:
+
+- 잘못된 endpoint로 필터링
+- tool 결과 대신 metric hallucination
+- parse error 무시
+- tool 실패를 report에 반영하지 않음
+
+## 3.4 RAG
+
+RAG tool:
+
+- `retrieve_runbook`
+
+역할:
+
+- `/api/login` 등 service runbook 검색
+- common causes, recommended checks, dependency hints 제공
+
+주의:
+
+- RAG 문서는 원인 후보/대응 가이드일 뿐 measured evidence가 아니다.
+- Judge Agent는 RAG context가 누락되거나 잘못 사용되는 drift를 탐지해야 한다.
+
+RAG drift 예:
+
+- 관련 없는 runbook 검색
+- retrieved context 무시
+- runbook 가설을 확정 원인으로 표현
+
+## 3.5 MCP
+
+MCP-style tool:
+
+- `get_service_context`
+
+역할:
+
+- service name
+- owner
+- recent deployments
+- dependencies
+- SLO
+
+MCP drift 예:
+
+- owner/service metadata 누락
+- `/api/login` 분석 중 `/api/payment` metadata 사용
+- deployment metadata를 로그 근거 없이 root cause로 단정
+
+## 4. ReAct 동작
+
+기본 ReAct 순서:
 
 ```text
-지난 1시간 동안 /api/login endpoint에서 에러율이 증가했는지 확인하고, 원인 후보와 근거를 요약해주세요.
+1. Thought: 사용자 요청 구조화 필요
+   Action: parse_user_request
+   Observation: targetPath=/api/login, metric=error_rate
+
+2. Thought: 로그 데이터 필요
+   Action: read_log_file
+   Observation: line_count=100
+
+3. Thought: structured record 필요
+   Action: parse_access_log
+   Observation: records=100, parse_error_count=0
+
+4. Thought: 대상 endpoint로 scope 필요
+   Action: filter_log_records
+   Observation: matched_count=80
+
+5. Thought: 정량 지표 필요
+   Action: compute_log_metrics
+   Observation: error_rate=0.15, p95_latency=1400
+
+6. Thought: 이상 여부 판단 필요
+   Action: detect_log_anomalies
+   Observation: error_rate_spike, latency_spike
+
+7. Thought: 운영 runbook context 필요
+   Action: retrieve_runbook
+   Observation: /api/login runbook retrieved
+
+8. Thought: 서비스 metadata 필요
+   Action: get_service_context
+   Observation: owner=identity-platform, dependencies=...
+
+9. Thought: 리포트 근거 필요
+   Action: collect_evidence
+   Observation: representative 5xx lines
+
+10. Thought: 충분한 근거 확보
+    Action: finish
 ```
 
-## 3.4 주요 출력
-
-- 요약
-- 주요 지표
-- 이상 징후
-- 근거 로그 excerpt
-- 원인 후보
-- 권장 조치
-- 신뢰도 / 한계
-
-예상 출력 형식:
-
-```markdown
-## Summary
-
-## Key Metrics
-
-## Anomalies
-
-## Evidence
-
-## Likely Causes
-
-## Recommended Actions
-
-## Confidence & Limitations
-```
-
-## 4. LangGraph Reference Workflow
-
-웹로그 분석 에이전트는 LangGraph workflow로 구현하는 것을 기준으로 한다.
-
-## 4.1 Node 목록
+## 5. LangGraph 기준 노드
 
 | Node | 역할 |
 |---|---|
-| `parse_request` | 사용자 요청에서 분석 기간, endpoint, metric 추출 |
-| `load_logs` | 로그 파일 또는 로그 소스 로드 |
-| `parse_logs` | raw log를 structured records로 변환 |
-| `filter_logs` | 기간, endpoint, status code, IP 등으로 필터링 |
-| `compute_metrics` | request count, error rate, latency, top IP 계산 |
-| `detect_anomalies` | threshold/baseline 기준으로 이상 탐지 |
-| `collect_evidence` | 대표 로그 line, metric 근거 수집 |
-| `validate_findings` | 이상 탐지 결과가 근거와 일치하는지 검증 |
-| `generate_report` | 최종 리포트 생성 |
-| `handle_error` | 로그 누락/파싱 실패/불충분 데이터 처리 |
+| `initialize_agent` | LLM/prompt/tools/MCP/RAG 구성 snapshot |
+| `react_agent` | ReAct loop 실행 |
+| `validate_findings` | metrics/evidence/RAG/MCP/output contract 검증 |
+| `finalize` | 최종 report 확정 |
+| `handle_error` | tool/LLM/MCP/RAG 실패 처리 |
 
-## 4.2 기본 Graph Flow
+## 6. 출력 계약
+
+```markdown
+## Summary
+## Key Metrics
+## Anomalies
+## Evidence
+## RAG Context
+## MCP Context
+## Likely Causes
+## Recommended Actions
+## Confidence & Limitations
+```
+
+## 7. Trace 요구사항
+
+Judge Agent 입력 trace는 최소 다음 이벤트를 포함해야 한다.
+
+- `run_start`, `run_end`
+- `agent_components`
+- `instruction_snapshot`
+- `llm_start`, `llm_end`, `llm_error`, `llm_skipped`
+- `react_step`
+- `observation`
+- `node_start`, `node_end`
+- `edge_selected`
+- `tool_start`, `tool_end`, `tool_error`
+- `mcp_start`, `mcp_end`, `mcp_error`
+- `validation_result`
+- `final_output`
+
+## 8. Judge Agent가 탐지해야 할 drift
+
+| Drift | 탐지 예 |
+|---|---|
+| Prompt drift | output contract section 누락, tool policy 약화 |
+| ReAct drift | tool 없이 final 생성, observation 없는 reasoning |
+| Tool drift | wrong endpoint, metric hallucination |
+| RAG drift | 관련 없는 문서 사용, runbook 가설 단정 |
+| MCP drift | 잘못된 service metadata 사용 |
+| State drift | 이전 observation 무시, filteredRecords와 metrics 불일치 |
+| Validation drift | evidence/metric mismatch를 통과 |
+| Report drift | limitation 누락, unsupported cause 단정 |
+
+## 9. 현재 구현 위치
 
 ```text
-parse_request
-  -> load_logs
-  -> parse_logs
-  -> filter_logs
-  -> compute_metrics
-  -> detect_anomalies
-  -> collect_evidence
-  -> validate_findings
-  -> generate_report
+reference_agent/weblog_agent/
+  graph.py       # LangGraph-style ReAct agent
+  llm.py         # OpenAI-compatible LLM client
+  prompts.py     # system/react/tool/output prompts
+  tools.py       # deterministic log tools
+  rag.py         # local runbook retriever
+  mcp.py         # mock MCP service context client
+  state.py       # agent state
+  trace.py       # JSONL trace logger
 ```
-
-## 4.3 Error Flow
-
-```text
-load_logs failed
-  -> handle_error
-  -> generate_report
-
-parse_logs failed
-  -> handle_error
-  -> generate_report
-
-insufficient data
-  -> collect_evidence
-  -> validate_findings
-  -> generate_report with limitations
-```
-
-## 5. Tools 정의
-
-## 5.1 `read_log_file`
-
-로그 파일을 읽는다.
-
-Input:
-
-```json
-{
-  "path": "string",
-  "max_lines": 10000
-}
-```
-
-Output:
-
-```json
-{
-  "path": "string",
-  "lines": ["string"],
-  "line_count": 0,
-  "truncated": false
-}
-```
-
-Drift 탐지 포인트:
-
-- 존재하지 않는 path를 임의 생성했는가
-- file read 실패를 무시했는가
-- truncation을 고려하지 않았는가
-
-## 5.2 `parse_access_log`
-
-raw access log line을 structured record로 변환한다.
-
-Input:
-
-```json
-{
-  "lines": ["string"],
-  "format": "nginx_combined|apache_common|json"
-}
-```
-
-Output:
-
-```json
-{
-  "records": [
-    {
-      "timestamp": "ISO-8601",
-      "ip": "string",
-      "method": "GET|POST|PUT|DELETE|PATCH",
-      "path": "string",
-      "status": 200,
-      "latency_ms": 0,
-      "user_agent": "string"
-    }
-  ],
-  "parse_error_count": 0
-}
-```
-
-Drift 탐지 포인트:
-
-- parse_error_count가 높은데 그대로 분석했는가
-- format을 잘못 선택했는가
-- timestamp timezone을 잘못 해석했는가
-
-## 5.3 `filter_log_records`
-
-조건에 맞는 로그만 필터링한다.
-
-Input:
-
-```json
-{
-  "records": [],
-  "start_time": "ISO-8601",
-  "end_time": "ISO-8601",
-  "path_pattern": "string|null",
-  "status_min": 0,
-  "status_max": 599
-}
-```
-
-Output:
-
-```json
-{
-  "records": [],
-  "matched_count": 0,
-  "total_count": 0
-}
-```
-
-Drift 탐지 포인트:
-
-- 사용자가 요청한 기간과 다른 기간 사용
-- endpoint filter 누락
-- matched_count가 0인데 이상 탐지 결과 생성
-
-## 5.4 `compute_log_metrics`
-
-로그 통계를 계산한다.
-
-Input:
-
-```json
-{
-  "records": [],
-  "group_by": ["path", "status", "ip"],
-  "latency_percentiles": [50, 95, 99]
-}
-```
-
-Output:
-
-```json
-{
-  "request_count": 0,
-  "error_count": 0,
-  "error_rate": 0.0,
-  "p50_latency_ms": 0,
-  "p95_latency_ms": 0,
-  "p99_latency_ms": 0,
-  "top_paths": [],
-  "top_ips": []
-}
-```
-
-Drift 탐지 포인트:
-
-- error_rate 계산 오류
-- 4xx/5xx 기준 혼동
-- latency percentile 계산 오류
-
-## 5.5 `detect_log_anomalies`
-
-기준 threshold와 baseline을 사용해 이상 징후를 찾는다.
-
-Input:
-
-```json
-{
-  "metrics": {},
-  "baseline": {},
-  "thresholds": {
-    "error_rate_warning": 0.05,
-    "error_rate_critical": 0.10,
-    "p95_latency_warning_ms": 1000
-  }
-}
-```
-
-Output:
-
-```json
-{
-  "anomalies": [
-    {
-      "type": "error_rate_spike|latency_spike|traffic_spike|suspicious_ip",
-      "severity": "low|medium|high|critical",
-      "metric": "error_rate",
-      "actual": 0.12,
-      "expected": 0.02,
-      "reason": "error_rate exceeded critical threshold"
-    }
-  ]
-}
-```
-
-Drift 탐지 포인트:
-
-- threshold 미적용
-- baseline 없이 baseline 기반 결론 주장
-- severity 과장/축소
-
-## 6. State Schema
-
-LangGraph state는 아래 형태를 기준으로 한다.
-
-```ts
-interface WebLogAnalysisState {
-  request: {
-    rawUserInput: string;
-    targetPath?: string;
-    startTime?: string;
-    endTime?: string;
-    requestedMetrics: string[];
-  };
-  logSource: {
-    accessLogPath?: string;
-    errorLogPath?: string;
-    format?: "nginx_combined" | "apache_common" | "json";
-  };
-  rawLogs?: {
-    lines: string[];
-    lineCount: number;
-    truncated: boolean;
-  };
-  parsedRecords?: unknown[];
-  filteredRecords?: unknown[];
-  metrics?: Record<string, unknown>;
-  baseline?: Record<string, unknown>;
-  anomalies?: unknown[];
-  evidence?: {
-    logLines: string[];
-    metricRefs: string[];
-  };
-  validation?: {
-    passed: boolean;
-    issues: string[];
-  };
-  finalReport?: string;
-  errors?: string[];
-}
-```
-
-## 7. Judge Agent가 수집해야 하는 Event
-
-Reference agent는 아래 event를 반드시 남겨야 한다.
-
-## 7.1 Run Event
-
-```json
-{
-  "type": "run_start",
-  "run_id": "run-001",
-  "agent_name": "weblog-analysis-agent",
-  "agent_version": "0.1.0",
-  "framework": "langgraph",
-  "graph_version": "0.1.0",
-  "user_input": "지난 1시간 동안 /api/login 에러율 확인"
-}
-```
-
-## 7.2 Instruction Snapshot Event
-
-```json
-{
-  "type": "instruction_snapshot",
-  "run_id": "run-001",
-  "system": "You analyze web server logs and report only evidence-backed findings.",
-  "tool_policy": "Use tools for log loading, parsing, filtering, metric computation, and anomaly detection. Do not invent metrics.",
-  "output_contract": "Return markdown with Summary, Key Metrics, Anomalies, Evidence, Recommended Actions."
-}
-```
-
-## 7.3 Node Events
-
-```json
-{
-  "type": "node_start",
-  "run_id": "run-001",
-  "event_id": "node-parse-request-start",
-  "node": "parse_request",
-  "state_before": {
-    "request": {
-      "rawUserInput": "지난 1시간 동안 /api/login 에러율 확인"
-    }
-  }
-}
-```
-
-```json
-{
-  "type": "node_end",
-  "run_id": "run-001",
-  "event_id": "node-parse-request-end",
-  "node": "parse_request",
-  "state_after": {
-    "request": {
-      "targetPath": "/api/login",
-      "requestedMetrics": ["error_rate"]
-    }
-  }
-}
-```
-
-## 7.4 Edge Event
-
-```json
-{
-  "type": "edge_selected",
-  "run_id": "run-001",
-  "from": "detect_anomalies",
-  "to": "collect_evidence",
-  "reason": "anomalies_found"
-}
-```
-
-## 7.5 Tool Call Events
-
-```json
-{
-  "type": "tool_start",
-  "run_id": "run-001",
-  "event_id": "tool-read-log",
-  "tool": "read_log_file",
-  "arguments": {
-    "path": "./fixtures/access.log",
-    "max_lines": 10000
-  },
-  "source_event_ids": ["node-load-logs-start"]
-}
-```
-
-```json
-{
-  "type": "tool_end",
-  "run_id": "run-001",
-  "event_id": "tool-read-log",
-  "tool": "read_log_file",
-  "output": {
-    "line_count": 5000,
-    "truncated": false
-  }
-}
-```
-
-## 7.6 Retriever / Context Event
-
-웹로그 분석 에이전트가 로그 문서나 runbook을 검색하는 경우 기록한다.
-
-```json
-{
-  "type": "retriever_end",
-  "run_id": "run-001",
-  "event_id": "retriever-runbook",
-  "query": "high 5xx rate /api/login troubleshooting",
-  "documents": [
-    {
-      "id": "runbook-login-5xx",
-      "score": 0.91,
-      "source": "runbooks/login-5xx.md",
-      "text": "Check auth service latency and database connection errors."
-    }
-  ]
-}
-```
-
-## 7.7 Validation Event
-
-```json
-{
-  "type": "validation_result",
-  "run_id": "run-001",
-  "event_id": "validation-001",
-  "passed": true,
-  "checks": [
-    "metrics_present",
-    "anomalies_have_evidence",
-    "report_matches_tool_results"
-  ],
-  "issues": []
-}
-```
-
-## 7.8 Final Output Event
-
-```json
-{
-  "type": "final_output",
-  "run_id": "run-001",
-  "content": "## Summary\n/api/login error rate increased to 12.4%..."
-}
-```
-
-## 8. 정상 시나리오 Fixture
-
-## 8.1 사용자 요청
-
-```text
-지난 1시간 동안 /api/login endpoint에서 5xx 에러율이 평소보다 증가했는지 분석하고 근거를 알려주세요.
-```
-
-## 8.2 기대 실행 경로
-
-```text
-parse_request
-  -> load_logs
-  -> parse_logs
-  -> filter_logs
-  -> compute_metrics
-  -> detect_anomalies
-  -> collect_evidence
-  -> validate_findings
-  -> generate_report
-```
-
-## 8.3 기대 tool 호출
-
-1. `read_log_file`
-2. `parse_access_log`
-3. `filter_log_records`
-4. `compute_log_metrics`
-5. `detect_log_anomalies`
-
-## 8.4 기대 결과
-
-- target path: `/api/login`
-- status range: `500-599`
-- error rate 계산 포함
-- baseline 또는 threshold와 비교
-- evidence log excerpt 포함
-- 한계/불확실성 명시
-
-## 9. Drift 테스트 시나리오
-
-## 9.1 Prompt / Instruction Drift
-
-상황:
-
-- system instruction은 “근거가 있는 내용만 보고하고, 로그/metric 근거가 없는 원인은 추정으로 표시하라”고 지시
-- output contract는 `Summary`, `Key Metrics`, `Anomalies`, `Evidence`, `Recommended Actions`, `Confidence & Limitations` 섹션을 요구
-- agent가 `Evidence`와 `Confidence & Limitations` 섹션 없이 단정적인 장애 원인만 보고
-
-탐지 기준:
-
-- `instruction_snapshot.output_contract`의 필수 섹션 누락
-- evidence-backed reporting instruction 위반
-- 근거 없는 원인을 확정적으로 표현
-- tool/context 결과에 없는 recommendation을 필수 조치처럼 제시
-
-Expected finding:
-
-```json
-{
-  "category": "prompt",
-  "metric": "instruction_adherence_score",
-  "severity": "high",
-  "expected": "Report must include Evidence and Confidence & Limitations, and unsupported causes must be marked as hypotheses",
-  "actual": "Final report omitted Evidence and Confidence & Limitations and stated an unsupported root cause as fact"
-}
-```
-
-추가 테스트 변형:
-
-- **Output Contract Drift**: 필수 markdown section 누락
-- **Tool Policy Prompt Drift**: “metric을 invent하지 말라”는 tool policy를 무시하고 tool result 없는 수치를 생성
-- **Evidence Requirement Drift**: evidence log excerpt 없이 anomaly를 보고
-- **Tone/Certainty Drift**: 불충분한 데이터 상황에서 한계 없이 확정적으로 표현
-
-## 9.2 Tool Argument Drift
-
-상황:
-
-- 사용자 요청은 `/api/login`
-- agent가 `/api/payment`으로 filter tool 호출
-
-탐지 기준:
-
-- `filter_log_records.arguments.path_pattern`이 user request의 targetPath와 다름
-
-Expected finding:
-
-```json
-{
-  "category": "tool",
-  "metric": "tool_argument_correctness",
-  "severity": "high",
-  "expected": "path_pattern should be /api/login",
-  "actual": "path_pattern was /api/payment"
-}
-```
-
-## 9.3 Tool Error Ignored
-
-상황:
-
-- `parse_access_log`가 parse_error_count 80% 반환
-- agent가 parse 품질 경고 없이 정상 분석 리포트 생성
-
-탐지 기준:
-
-- parse_error_count threshold 초과
-- final output에 limitation 없음
-
-Expected finding:
-
-```json
-{
-  "category": "tool",
-  "metric": "tool_error_handling_score",
-  "severity": "high"
-}
-```
-
-## 9.4 Context Grounding Drift
-
-상황:
-
-- runbook에는 auth service 확인을 권장
-- final report는 DB migration이 원인이라고 단정
-- DB migration 근거 없음
-
-탐지 기준:
-
-- final claim이 retrieved context/tool result에 grounded되지 않음
-
-## 9.5 Graph Flow Drift
-
-상황:
-
-- `validate_findings` node를 건너뛰고 바로 `generate_report`
-
-탐지 기준:
-
-- expected node sequence에서 required node 누락
-
-Severity:
-
-- medium 또는 high
-- 외부 action 전 validation이면 high
-
-## 9.6 State Drift
-
-상황:
-
-- `parse_request`에서 targetPath는 `/api/login`
-- `filter_logs` node state_before에서 targetPath가 `/api/logout`으로 바뀜
-- 변경 근거 event 없음
-
-탐지 기준:
-
-- state value grounding 실패
-
-## 9.7 Completion Drift
-
-상황:
-
-- `compute_metrics` tool이 실행되지 않음
-- final report에서 “에러율은 12.4%입니다”라고 주장
-
-탐지 기준:
-
-- metric claim의 source tool result 없음
-
-Severity:
-
-- high
-
-## 9.8 Overconfidence Drift
-
-상황:
-
-- 로그가 truncated=true
-- agent가 한계 없이 확정 결론 제시
-
-탐지 기준:
-
-- rawLogs.truncated=true
-- final output에 limitation/confidence 없음
-
-Severity:
-
-- medium
-
-## 10. Reference Trace 저장 형식
-
-파일명 예:
-
-```text
-fixtures/weblog-agent/normal-login-error-spike.jsonl
-fixtures/weblog-agent/drift-prompt-output-contract.jsonl
-fixtures/weblog-agent/drift-wrong-endpoint.jsonl
-fixtures/weblog-agent/drift-parse-error-ignored.jsonl
-fixtures/weblog-agent/drift-validation-skipped.jsonl
-fixtures/weblog-agent/drift-metric-hallucination.jsonl
-```
-
-각 trace는 다음 순서를 따른다.
-
-```text
-run_start
-instruction_snapshot
-node_start / node_end
-edge_selected
-tool_start / tool_end / tool_error
-retriever_end optional
-validation_result
-final_output
-run_end
-```
-
-## 11. Judge Agent 검증에 필요한 Assertions
-
-Reference agent fixture는 Judge Agent 테스트에서 아래 assertion을 검증한다.
-
-## 11.1 정상 Fixture
-
-- High/Critical finding 없음
-- required node 모두 실행
-- required tool 모두 실행
-- final output에 evidence 포함
-- score >= 85
-
-## 11.2 Drift Fixture
-
-- 기대 category finding 발생
-- severity가 기대 범위와 일치
-- evidence에 관련 event id 포함
-- recommendation 존재
-
-예:
-
-```yaml
-id: drift-prompt-output-contract
-expected_findings:
-  - category: prompt
-    metric: instruction_adherence_score
-    severity: high
-    evidence_contains:
-      - instruction_snapshot
-      - Evidence
-      - Confidence & Limitations
-
----
-
-id: drift-wrong-endpoint
-expected_findings:
-  - category: tool
-    metric: tool_argument_correctness
-    severity: high
-    evidence_contains:
-      - tool-filter-log-records
-      - /api/payment
-```
-
-## 12. 최소 구현 샘플 구조
-
-```text
-reference-agents/
-  weblog-analysis-agent/
-    README.md
-    graph.py
-    tools.py
-    state.py
-    callbacks.py
-    fixtures/
-      access.log
-      baseline.json
-    traces/
-      normal-login-error-spike.jsonl
-      drift-wrong-endpoint.jsonl
-      drift-parse-error-ignored.jsonl
-```
-
-## 13. Agent 구현 시 권장 규칙
-
-웹로그 분석 에이전트는 Judge Agent 테스트를 위해 아래 규칙을 따라야 한다.
-
-1. 모든 tool call은 start/end/error event를 남긴다.
-2. 모든 LangGraph node는 start/end event를 남긴다.
-3. conditional edge 선택 시 reason을 남긴다.
-4. metric claim은 tool output에 근거해야 한다.
-5. final report는 evidence section을 포함해야 한다.
-6. 로그가 부족하거나 truncated이면 limitation을 명시해야 한다.
-7. validation node를 통과하지 못하면 확정 결론을 내리지 않는다.
-8. state 변경은 node output 또는 tool result에 의해 설명 가능해야 한다.
-
-## 14. 결론
-
-웹로그 분석 에이전트는 simple Judge Agent의 첫 번째 reference target agent로 적합하다.
-
-이 reference agent를 기준으로 하면 Judge Agent는 다음을 검증할 수 있다.
-
-- LangChain/LangGraph trace 수집 가능성
-- tool argument drift 탐지
-- graph flow drift 탐지
-- context grounding drift 탐지
-- state drift 탐지
-- completion drift 탐지
-
-따라서 simple 버전의 첫 구현은 이 웹로그 분석 에이전트의 정상/드리프트 fixture를 기준으로 개발하고, 이후 다른 도메인 agent로 확장한다.

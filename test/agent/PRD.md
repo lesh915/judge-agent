@@ -235,3 +235,26 @@ MVP fixture:
 - LLM 미설정 시 fallback으로 정상 동작하고 `llm_skipped` event 생성
 - sample report 생성
 - README와 개발 가이드 존재
+
+## ReAct / LangGraph Agent 요구사항 추가
+
+Reference agent는 단순 pipeline이 아니라 LangGraph ReAct agent여야 한다.
+
+필수 구성:
+
+- LLM: ReAct action 선택 및 final report 생성
+- Prompt: system prompt, ReAct JSON protocol, tool policy, output contract
+- Tools: 로그 분석 tool set
+- RAG: service runbook retriever
+- MCP: service metadata lookup
+- StateGraph: initialize → react loop → validate → finalize
+- Trace: LLM/tool/RAG/MCP/React/state/edge event 기록
+
+Acceptance Criteria:
+
+- trace에 `agent_components`가 있어야 한다.
+- trace에 `react_step`이 최소 5개 이상 있어야 한다.
+- trace에 `tool_start/tool_end`가 있어야 한다.
+- trace에 RAG tool(`retrieve_runbook`) 호출이 있어야 한다.
+- trace에 `mcp_start/mcp_end`가 있어야 한다.
+- final report에 `RAG Context`, `MCP Context` section이 있어야 한다.

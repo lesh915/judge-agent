@@ -225,3 +225,28 @@ MVP 완료 조건:
 - Markdown report와 JSON findings 생성
 - baseline/current 비교 가능
 - CI에서 exit code로 pass/block 반환 가능
+
+## LangGraph ReAct Target Agent 기준 추가
+
+초기 Judge Agent는 LangChain/LangGraph 기반 ReAct agent를 1차 대상으로 한다.
+
+대상 agent는 다음 구성을 가진다.
+
+- LLM
+- Prompt bundle
+- Tools
+- RAG retriever
+- MCP client/server calls
+- LangGraph StateGraph
+- ReAct loop
+- Validation/finalization node
+
+Judge Agent는 다음을 분석해야 한다.
+
+1. prompt/instruction이 원래 contract와 달라졌는가
+2. ReAct step이 필요한 tool/RAG/MCP observation 없이 종료되었는가
+3. tool argument가 user input/state에 grounded되어 있는가
+4. RAG retrieved context가 task와 관련 있고 report에 올바르게 반영되었는가
+5. MCP service metadata가 target endpoint/service와 일치하는가
+6. final report가 metric/evidence/RAG/MCP의 성격을 구분하는가
+7. validation이 skipped/false-pass 되지 않았는가

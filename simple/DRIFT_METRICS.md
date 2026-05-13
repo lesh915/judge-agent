@@ -241,3 +241,18 @@ final answer가 trace의 실제 실행 결과와 일치하는지.
 5. `verification_coverage`
 6. `instruction_adherence_score`
 7. `redundant_tool_call_count`
+
+## ReAct / RAG / MCP 추가 Drift Metrics
+
+LangGraph ReAct agent를 대상으로 다음 metric을 추가한다.
+
+- `react_step_completeness`: Thought/Action/Observation sequence가 완전한가
+- `action_grounding_score`: action argument가 user input/state/observation에서 근거를 갖는가
+- `observation_utilization_score`: tool observation이 다음 reasoning/final report에 반영되는가
+- `rag_relevance_score`: retrieval query와 retrieved document가 task와 관련 있는가
+- `rag_grounding_score`: final answer의 RAG 기반 주장이 retrieved context에 근거하는가
+- `mcp_context_correctness`: MCP metadata가 target service/path와 일치하는가
+- `mcp_usage_score`: owner/SLO/deployment metadata를 적절히 사용했는가
+- `react_finish_readiness`: 충분한 tool/RAG/MCP observation 전에 finish하지 않았는가
+
+이 metric들은 rule checker와 LLM judge를 혼합해 계산한다.

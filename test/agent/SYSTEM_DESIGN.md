@@ -154,3 +154,17 @@ outputs/
 - IP는 test IP 또는 masked IP 사용을 권장한다.
 - secret/token query string은 redaction한다.
 - raw state 전체 저장 대신 allowlist 사용.
+
+## ReAct / MCP / RAG 설계 업데이트
+
+Reference agent는 다음 runtime layer를 갖는다.
+
+- **Graph Layer**: LangGraph-style node/edge execution
+- **ReAct Controller**: LLM이 next action 결정
+- **Tool Layer**: log analysis tools
+- **RAG Layer**: runbook retrieval
+- **MCP Layer**: service metadata lookup
+- **Validation Layer**: tool result/report consistency 검증
+- **Trace Layer**: Judge Agent 분석용 JSONL event stream
+
+MCP/RAG 결과는 final answer의 근거와 구분해야 한다. 로그 metric은 measured evidence이고, RAG/MCP는 context/hypothesis/routing metadata다.

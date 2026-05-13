@@ -14,3 +14,18 @@
 ## 목적
 
 이 에이전트는 LangChain/LangGraph 기반 웹로그 분석 agent이며, Judge Agent가 drift를 탐지하기 위한 reference trace와 fixture를 생성한다.
+
+## 현재 기준: ReAct Reference Agent
+
+Reference agent는 다음을 반드시 포함한다.
+
+- LangGraph-style graph node/edge
+- LLM 기반 ReAct decision
+- Prompt bundle: system, ReAct protocol, tool policy, output contract
+- Log analysis tools
+- RAG runbook retriever
+- MCP service-context client
+- validation node
+- JSONL trace
+
+즉, Judge Agent의 target은 “일반적인 AI Agent 구성요소를 가진 LangChain/LangGraph ReAct agent”다.

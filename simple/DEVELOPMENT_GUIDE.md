@@ -295,3 +295,23 @@ judge-agent-simple analyze --trace trace.json --framework langgraph
 - trace에 없는 내용은 추정하지 않는다.
 - evidence 없는 finding은 만들지 않는다.
 - privacy를 위해 prompt/context raw text 저장은 옵션화한다.
+
+## Reference Agent 개발 기준 업데이트
+
+reference target은 `reference_agent/weblog_agent`의 Web Log ReAct Agent다.
+
+구현 요구:
+
+- LangGraph-style node/edge event를 기록한다.
+- `react_agent` node는 ReAct loop를 수행한다.
+- LLM은 `react_decide` call로 다음 action을 결정한다.
+- tool/RAG/MCP call은 각각 trace event를 남긴다.
+- fallback mode는 CI용이며, fallback도 ReAct step을 동일하게 남긴다.
+- final report는 `RAG Context`, `MCP Context`를 포함한다.
+
+로컬 검증:
+
+```bash
+python3 -m unittest discover reference_agent/weblog_agent/tests
+python3 -m reference_agent.weblog_agent.cli run-fixture normal-login-error-spike --no-llm
+```

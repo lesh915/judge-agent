@@ -250,3 +250,18 @@ System prompt는 다음을 반드시 포함한다.
 - drift fixture는 재현 가능해야 한다.
 - LLM의 비결정성을 줄이기 위해 fixture 테스트는 가능하면 deterministic tool output을 사용한다.
 - 실제 LLM 호출 없이 static trace로도 Judge Agent 테스트가 가능해야 한다.
+
+## ReAct 구현 지침 추가
+
+구현은 LangChain/LangGraph agent를 모델링해야 한다.
+
+1. `initialize_agent` node에서 구성요소 snapshot을 trace에 기록한다.
+2. `react_agent` node에서 ReAct loop를 실행한다.
+3. LLM은 매 step JSON으로 다음 action을 반환한다.
+4. action은 tool/RAG/MCP/finish 중 하나여야 한다.
+5. 각 action 결과는 `observation` event로 기록한다.
+6. deterministic fallback은 CI용으로만 사용하고 `llm_skipped`를 남긴다.
+7. `validate_findings`에서 metrics/evidence/RAG/MCP/output contract를 검증한다.
+8. final report는 RAG/MCP context를 별도 section으로 표시한다.
+
+테스트는 `react_step`, `mcp_start/mcp_end`, RAG tool call, LLM event를 검증해야 한다.

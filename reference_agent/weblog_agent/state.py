@@ -15,6 +15,9 @@ class WebLogAnalysisState:
     baseline: Dict[str, Any] = field(default_factory=dict)
     anomalies: List[Dict[str, Any]] = field(default_factory=list)
     evidence: Dict[str, Any] = field(default_factory=lambda: {"logLines": [], "metricRefs": []})
+    ragContext: List[Dict[str, Any]] = field(default_factory=list)
+    mcpContext: Dict[str, Any] = field(default_factory=dict)
+    reactSteps: List[Dict[str, Any]] = field(default_factory=list)
     validation: Dict[str, Any] = field(default_factory=lambda: {"passed": False, "issues": []})
     finalReport: Optional[str] = None
     errors: List[str] = field(default_factory=list)
@@ -33,6 +36,9 @@ class WebLogAnalysisState:
             "baseline": self.baseline,
             "anomalies": self.anomalies,
             "evidence": self.evidence,
+            "ragContextCount": len(self.ragContext),
+            "mcpContext": self.mcpContext,
+            "reactStepCount": len(self.reactSteps),
             "validation": self.validation,
             "errors": self.errors,
             "finalReportPresent": bool(self.finalReport),

@@ -15,9 +15,14 @@ class CliTests(unittest.TestCase):
             self.assertTrue(Path(data['report_path']).exists())
             report = Path(data['report_path']).read_text()
             self.assertIn('## Evidence', report)
+            self.assertIn('## RAG Context', report)
+            self.assertIn('## MCP Context', report)
             trace = Path(data['trace_path']).read_text()
             self.assertIn('node_start', trace)
             self.assertIn('tool_start', trace)
+            self.assertIn('react_step', trace)
+            self.assertIn('mcp_start', trace)
+            self.assertIn('agent_components', trace)
 
 if __name__ == '__main__':
     unittest.main()

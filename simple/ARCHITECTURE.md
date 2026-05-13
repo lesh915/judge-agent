@@ -282,3 +282,61 @@ judge-agent-simple compare \
 ## 13. 결론
 
 Simple 버전은 모든 agent framework를 지원하지 않는다. LangChain/LangGraph trace를 정확히 수집하고, tool/context/graph flow drift를 빠르게 찾는 데 집중한다.
+
+## 11. 대상 Agent 기준: LangGraph ReAct Agent
+
+Simple Judge Agent의 1차 target은 다음 구성을 가진 LangChain/LangGraph agent다.
+
+```text
+LangGraph StateGraph
+  nodes:
+    initialize_agent
+    react_agent
+    validate_findings
+    finalize
+
+react_agent:
+  LLM Thought
+  -> Action: tool / retriever / MCP
+  -> Observation
+  -> repeat
+  -> finish
+```
+
+필수 관찰 대상:
+
+- LLM: prompt, model, input/output, usage, error
+- Prompt: system prompt, ReAct protocol, tool policy, output contract
+- Tools: name, args, result, error, source state
+- RAG: query, retrieved documents, relevance, context usage
+- MCP: server, method, args, result, service metadata usage
+- State: node별 state snapshot, selected graph edge
+- Final output: evidence/metric/context groundedness
+
+## 12. ReAct Drift 분석 관점
+
+Judge Agent는 단순히 최종 답변만 보지 않고 ReAct trajectory를 분석한다.
+
+| 분석 축 | 정상 | Drift |
+|---|---|---|
+| Thought→Action alignment | 필요한 tool을 순서대로 선택 | 근거 없이 finish |
+| Action argument grounding | user input/state에서 파생 | unrelated endpoint/query |
+| Observation usage | tool result가 다음 thought/report에 반영 | observation 무시 |
+| RAG usage | runbook은 context/hypothesis로 사용 | runbook을 확정 원인으로 단정 |
+| MCP usage | service metadata로 routing/context 보강 | 잘못된 service owner/SLO 사용 |
+| Validation | metric/evidence/context contract 검증 | 검증 skip 또는 false pass |
+
+## 13. 확장 Event Types
+
+기존 event type에 다음을 추가한다.
+
+- `agent_components`
+- `instruction_snapshot`
+- `react_step`
+- `observation`
+- `mcp_start`
+- `mcp_end`
+- `mcp_error`
+- `validation_result`
+
+Normalizer는 LangSmith/LangChain trace에서도 위 canonical event로 변환해야 한다.

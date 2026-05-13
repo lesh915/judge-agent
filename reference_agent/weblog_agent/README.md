@@ -1,31 +1,44 @@
-# Web Log Analysis Reference Agent
+# Web Log Analysis ReAct Reference Agent
 
-Runnable web-log analysis agent for Judge Agent drift development.
+Judge Agent가 drift를 탐지/분석/리포팅할 기준 대상(reference target) 에이전트입니다.
 
-This is no longer just a static test harness. It runs a real agent pipeline:
+이 에이전트는 단순 fixture runner가 아니라, 일반적인 LangChain/LangGraph 기반 AI Agent 구성을 반영합니다.
 
-1. parses the user's log-analysis intent, using an OpenAI-compatible LLM when configured;
-2. executes log-analysis tools;
-3. moves through LangGraph-compatible node/edge workflow events;
-4. validates evidence and metrics;
-5. generates the final markdown report, using the LLM when available and a deterministic fallback when not;
-6. emits JSONL trace events for Judge Agent drift evaluation.
+## Agent 구성
 
-The implementation is dependency-light so it can run in CI without external packages, but it exposes the same trace contract expected from a LangGraph implementation. A later iteration can swap the sequential runner for the actual LangGraph runtime without changing Judge Agent inputs.
+```text
+User Request
+  -> LangGraph-style graph
+      -> initialize_agent
+      -> react_agent loop
+          Thought -> Action(tool/mcp/rag) -> Observation
+      -> validate_findings
+      -> finalize report
+```
+
+포함 구성요소:
+
+- **LLM**: ReAct action 결정과 최종 리포트 생성
+- **Prompt**: system prompt, ReAct protocol, tool policy, output contract
+- **Tools**: 로그 로딩/파싱/필터링/메트릭/이상 탐지 도구
+- **MCP**: 서비스 소유자, 최근 배포, SLO, dependency metadata 조회
+- **RAG**: runbook 검색을 통한 원인 후보/대응 가이드 보강
+- **ReAct loop**: `Thought -> Action -> Observation` 반복 후 `finish`
+- **Trace**: Judge Agent가 drift를 판단할 수 있도록 모든 LLM/tool/MCP/RAG/edge/state 이벤트 기록
+
+현재 구현은 CI 재현성을 위해 표준 라이브러리 기반으로 동작하지만, trace/graph/prompt/tool interface는 LangChain/LangGraph ReAct Agent 관찰 모델에 맞췄습니다. 실제 LangGraph runtime으로 교체해도 Judge Agent 입력 계약은 유지됩니다.
 
 ## LLM configuration
 
-The agent uses an OpenAI-compatible Chat Completions endpoint via Python standard library HTTP calls.
-
-Environment variables:
+OpenAI-compatible Chat Completions endpoint를 사용합니다.
 
 ```bash
 export OPENAI_API_KEY=...
-export WEBLOG_AGENT_MODEL=gpt-4o-mini          # optional
-export OPENAI_BASE_URL=https://api.openai.com/v1 # optional, OpenAI-compatible endpoint
+export WEBLOG_AGENT_MODEL=gpt-4o-mini
+export OPENAI_BASE_URL=https://api.openai.com/v1
 ```
 
-If no API key is configured, the agent still works with deterministic fallback logic and emits `llm_skipped` events in the trace. For deterministic CI runs, pass `--no-llm`.
+API key가 없거나 `--no-llm`을 쓰면 deterministic fallback policy로 ReAct action을 선택합니다. 이 경우에도 trace에는 `llm_skipped`가 남습니다.
 
 ## Run
 
@@ -36,26 +49,78 @@ python3 -m reference_agent.weblog_agent.cli run-fixture normal-login-error-spike
 python3 -m reference_agent.weblog_agent.cli run-all --no-llm
 ```
 
-Run a custom analysis:
+Custom analysis:
 
 ```bash
-python3 -m reference_agent.weblog_agent.cli analyze   --input "지난 1시간 동안 /api/login 5xx 에러율을 분석해주세요"   --access-log reference_agent/weblog_agent/fixtures/access.log
+python3 -m reference_agent.weblog_agent.cli analyze \
+  --input "지난 1시간 동안 /api/login 5xx 에러율을 분석해주세요" \
+  --access-log reference_agent/weblog_agent/fixtures/access.log
 ```
 
-Outputs are written to:
+Outputs:
 
 - `reference_agent/weblog_agent/traces/*.jsonl`
 - `reference_agent/weblog_agent/reports/*.md`
 
+## ReAct tools
+
+- `parse_user_request`
+- `read_log_file`
+- `parse_access_log`
+- `filter_log_records`
+- `compute_log_metrics`
+- `detect_log_anomalies`
+- `retrieve_runbook` — RAG retriever
+- `get_service_context` — MCP-style metadata call
+- `collect_evidence`
+- `finish`
+
 ## Trace events
 
-The agent emits:
+Judge Agent가 drift를 분석할 때 보는 주요 이벤트:
 
 - `run_start` / `run_end`
+- `agent_components`
 - `instruction_snapshot`
 - `llm_start` / `llm_end` / `llm_error` / `llm_skipped`
+- `react_step`
+- `observation`
 - `node_start` / `node_end`
 - `edge_selected`
 - `tool_start` / `tool_end` / `tool_error`
+- `mcp_start` / `mcp_end` / `mcp_error`
 - `validation_result`
 - `final_output`
+
+## Drift scenarios covered
+
+Reference fixtures can simulate drift such as:
+
+- prompt/output contract drift
+- wrong endpoint/tool input drift
+- parse error ignored drift
+- validation skipped drift
+- metric hallucination drift
+- missing/incorrect RAG or MCP context drift, to be expanded
+
+## Optional actual LangGraph app
+
+The CLI runner is dependency-light for CI. If you install optional dependencies, the same nodes can be compiled as an actual LangGraph app:
+
+```bash
+pip install -e '.[agent]'
+```
+
+See `reference_agent/weblog_agent/langgraph_app.py`:
+
+```python
+from reference_agent.weblog_agent.langgraph_app import build_langgraph_app
+
+app = build_langgraph_app(agent)
+```
+
+This preserves the same node names and state contract:
+
+```text
+initialize_agent -> react_agent -> validate_findings -> finalize -> END
+```
