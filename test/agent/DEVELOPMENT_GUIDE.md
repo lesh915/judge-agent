@@ -265,3 +265,14 @@ System prompt는 다음을 반드시 포함한다.
 8. final report는 RAG/MCP context를 별도 section으로 표시한다.
 
 테스트는 `react_step`, `mcp_start/mcp_end`, RAG tool call, LLM event를 검증해야 한다.
+
+## LLM 환경 설정 관리 지침
+
+LLM endpoint/model/auth 정보는 코드에 하드코딩하지 않는다.
+
+- 기본 예시는 `reference_agent/weblog_agent/.env.example`에 둔다.
+- 실제 값은 `reference_agent/weblog_agent/.env` 또는 `WEBLOG_AGENT_ENV_FILE`로 지정한 외부 파일에 둔다.
+- OpenAI-compatible URL이면 OpenAI, local LLM, 사내 gateway 모두 동일 client로 호출한다.
+- API key가 필요한 경우 `WEBLOG_AGENT_LLM_API_KEY_ENV`로 secret env var 이름만 설정한다.
+- local LLM은 `WEBLOG_AGENT_LLM_REQUIRE_API_KEY=false`로 실행한다.
+- trace에는 sanitized config만 기록한다.

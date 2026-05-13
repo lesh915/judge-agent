@@ -251,3 +251,42 @@ reference_agent/weblog_agent/
   state.py       # agent state
   trace.py       # JSONL trace logger
 ```
+
+## 10. LLM 연결 설정 정책
+
+Reference agent는 OpenAI 전용이 아니다. OpenAI-compatible Chat Completions API를 제공하는 모든 endpoint를 사용할 수 있어야 한다.
+
+지원 예:
+
+- OpenAI
+- vLLM local/server
+- LM Studio
+- Ollama OpenAI-compatible endpoint
+- 사내 LLM Gateway
+- 기타 `/chat/completions` 호환 URL
+
+연결 정보는 코드에 하드코딩하지 않고 환경 파일 또는 환경변수로 관리한다.
+
+```bash
+WEBLOG_AGENT_ENV_FILE=/secure/path/weblog-agent.env
+```
+
+주요 설정:
+
+```bash
+WEBLOG_AGENT_LLM_PROVIDER=openai-compatible
+WEBLOG_AGENT_LLM_BASE_URL=http://localhost:1234/v1
+WEBLOG_AGENT_LLM_CHAT_COMPLETIONS_PATH=/chat/completions
+WEBLOG_AGENT_LLM_MODEL=local-model
+WEBLOG_AGENT_LLM_REQUIRE_API_KEY=false
+WEBLOG_AGENT_LLM_API_KEY_ENV=OPENAI_API_KEY
+WEBLOG_AGENT_LLM_AUTH_HEADER=Authorization
+WEBLOG_AGENT_LLM_AUTH_SCHEME=Bearer
+```
+
+보안 요구:
+
+- API key를 repository에 commit하지 않는다.
+- `.env`는 `.gitignore`에 포함한다.
+- trace에는 API key를 기록하지 않고 sanitized config만 남긴다.
+- local LLM처럼 key가 없는 endpoint는 `WEBLOG_AGENT_LLM_REQUIRE_API_KEY=false`로 실행한다.

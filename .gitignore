@@ -6,3 +6,8 @@ reference_agent/weblog_agent/reports/*.md
 __pycache__/
 *.py[cod]
 .pytest_cache/
+
+# Local environment / secrets
+.env
+reference_agent/weblog_agent/.env
+*.env.local

@@ -75,6 +75,7 @@ class WebLogAnalysisAgent:
             user_input=user_input,
             llm_enabled=bool(self.use_llm and self.llm.enabled),
             llm_model=self.llm.config.model,
+            llm_config=self.llm.config.sanitized(),
         )
         self.trace.emit("instruction_snapshot", system=SYSTEM_PROMPT, react_protocol=REACT_PROTOCOL, tool_policy=TOOL_POLICY, output_contract=OUTPUT_CONTRACT)
         try:
@@ -152,7 +153,7 @@ class WebLogAnalysisAgent:
             self.trace.emit("llm_skipped", event_id=event_id, name=name, reason="disabled_by_cli")
             return None
         if not self.llm.enabled:
-            self.trace.emit("llm_skipped", event_id=event_id, name=name, reason=f"missing_{self.llm.config.api_key_env}", model=self.llm.config.model)
+            self.trace.emit("llm_skipped", event_id=event_id, name=name, reason="llm_not_configured_or_missing_api_key", model=self.llm.config.model, config=self.llm.config.sanitized())
             return None
         self.trace.emit("llm_start", event_id=event_id, name=name, model=self.llm.config.model, messages=messages)
         try:
@@ -165,7 +166,7 @@ class WebLogAnalysisAgent:
 
     def initialize_agent(self, state: WebLogAnalysisState):
         mcp_tools = self._mcp_list_tools()
-        self.trace.emit("agent_components", llm={"provider": self.llm.config.provider, "model": self.llm.config.model}, prompt=["SYSTEM_PROMPT", "REACT_PROTOCOL", "TOOL_POLICY", "OUTPUT_CONTRACT"], tools=self.tool_names(), mcp_servers=[self.mcp.server_name], mcp_tools=mcp_tools.get("tools", []), rag={"retriever": "LocalRunbookRetriever"})
+        self.trace.emit("agent_components", llm=self.llm.config.sanitized(), prompt=["SYSTEM_PROMPT", "REACT_PROTOCOL", "TOOL_POLICY", "OUTPUT_CONTRACT"], tools=self.tool_names(), mcp_servers=[self.mcp.server_name], mcp_tools=mcp_tools.get("tools", []), rag={"retriever": "LocalRunbookRetriever"})
 
     def tool_names(self) -> List[str]:
         return ["parse_user_request", "read_log_file", "parse_access_log", "filter_log_records", "compute_log_metrics", "detect_log_anomalies", "retrieve_runbook", "get_service_context", "collect_evidence", "finish"]

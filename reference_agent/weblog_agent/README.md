@@ -30,15 +30,67 @@ User Request
 
 ## LLM configuration
 
-OpenAI-compatible Chat Completions endpoint를 사용합니다.
+OpenAI만 하드코딩하지 않습니다. OpenAI-compatible Chat Completions endpoint라면 OpenAI, vLLM, LM Studio, Ollama OpenAI mode, 사내 LLM Gateway 등 어떤 URL도 사용할 수 있습니다.
+
+연결 정보는 코드가 아니라 환경 파일 또는 환경변수로 관리합니다.
+
+권장 방식:
 
 ```bash
-export OPENAI_API_KEY=...
-export WEBLOG_AGENT_MODEL=gpt-4o-mini
-export OPENAI_BASE_URL=https://api.openai.com/v1
+cp reference_agent/weblog_agent/.env.example reference_agent/weblog_agent/.env
+# .env에서 base url/model/auth 설정 수정
+python3 -m reference_agent.weblog_agent.cli run-fixture normal-login-error-spike
 ```
 
-API key가 없거나 `--no-llm`을 쓰면 deterministic fallback policy로 ReAct action을 선택합니다. 이 경우에도 trace에는 `llm_skipped`가 남습니다.
+또는 별도 파일을 지정합니다.
+
+```bash
+export WEBLOG_AGENT_ENV_FILE=/secure/path/weblog-agent.env
+```
+
+주요 설정:
+
+```bash
+WEBLOG_AGENT_LLM_PROVIDER=openai-compatible
+WEBLOG_AGENT_LLM_BASE_URL=http://localhost:1234/v1
+WEBLOG_AGENT_LLM_CHAT_COMPLETIONS_PATH=/chat/completions
+WEBLOG_AGENT_LLM_MODEL=local-model
+WEBLOG_AGENT_LLM_REQUIRE_API_KEY=false
+
+# 인증이 필요한 Gateway/OpenAI 사용 시
+WEBLOG_AGENT_LLM_REQUIRE_API_KEY=true
+WEBLOG_AGENT_LLM_API_KEY_ENV=OPENAI_API_KEY
+WEBLOG_AGENT_LLM_AUTH_HEADER=Authorization
+WEBLOG_AGENT_LLM_AUTH_SCHEME=Bearer
+```
+
+예시:
+
+```bash
+# OpenAI
+WEBLOG_AGENT_LLM_BASE_URL=https://api.openai.com/v1
+WEBLOG_AGENT_LLM_MODEL=gpt-4o-mini
+WEBLOG_AGENT_LLM_REQUIRE_API_KEY=true
+WEBLOG_AGENT_LLM_API_KEY_ENV=OPENAI_API_KEY
+
+# LM Studio
+WEBLOG_AGENT_LLM_BASE_URL=http://localhost:1234/v1
+WEBLOG_AGENT_LLM_MODEL=local-model
+WEBLOG_AGENT_LLM_REQUIRE_API_KEY=false
+
+# vLLM
+WEBLOG_AGENT_LLM_BASE_URL=http://localhost:8000/v1
+WEBLOG_AGENT_LLM_MODEL=Qwen/Qwen2.5-7B-Instruct
+WEBLOG_AGENT_LLM_REQUIRE_API_KEY=false
+
+# 사내 OpenAI-compatible Gateway
+WEBLOG_AGENT_LLM_BASE_URL=https://llm-gateway.example.com/v1
+WEBLOG_AGENT_LLM_MODEL=company-agent-model
+WEBLOG_AGENT_LLM_REQUIRE_API_KEY=true
+WEBLOG_AGENT_LLM_API_KEY_ENV=COMPANY_LLM_KEY
+```
+
+API key가 없거나 `--no-llm`을 쓰면 deterministic fallback policy로 ReAct action을 선택합니다. 이 경우에도 trace에는 `llm_skipped`가 남습니다. trace에는 secret이 기록되지 않고 sanitized config만 기록됩니다.
 
 ## Run
 
