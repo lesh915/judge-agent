@@ -13,10 +13,13 @@
 - Python 3.11+
 - LangGraph
 - LangChain Core
+- OpenAI-compatible Chat Completions API
 - Pydantic
 - Typer 또는 Click CLI
 - pytest
 - JSONL trace logger
+
+MVP 구현은 CI에서 바로 실행 가능하도록 Python 표준 라이브러리 기반 fallback을 제공한다. 단, 실제 agent 동작을 위해 `OPENAI_API_KEY`가 있으면 request parsing과 report generation 단계에서 LLM을 호출해야 한다.
 
 선택:
 
@@ -145,7 +148,22 @@ parse_logs failed -> handle_error -> generate_report
 insufficient data -> collect_evidence -> validate_findings -> generate_report
 ```
 
-### Step 6. Fixture Runner
+### Step 6. LLM 연결
+
+에이전트는 최소 2개 지점에서 LLM을 사용한다.
+
+1. `parse_request`: 사용자 요청을 구조화된 분석 의도로 변환
+2. `generate_report`: tool/metric/evidence/state를 기반으로 최종 리포트 작성
+
+요구사항:
+
+- OpenAI-compatible Chat Completions endpoint 지원
+- `OPENAI_API_KEY`, `WEBLOG_AGENT_MODEL`, `OPENAI_BASE_URL` 환경변수 지원
+- API key가 없으면 deterministic fallback으로 정상 동작
+- fallback 사용 시 trace에 `llm_skipped` event 기록
+- LLM 호출 시 `llm_start`, `llm_end`, `llm_error` event 기록
+
+### Step 7. Fixture Runner
 
 정상 및 drift fixture를 실행하는 CLI를 만든다.
 
@@ -157,7 +175,7 @@ python -m reference_agent.weblog_agent.cli run-fixture drift-wrong-endpoint
 python -m reference_agent.weblog_agent.cli run-all --output traces/
 ```
 
-### Step 7. Tests
+### Step 8. Tests
 
 테스트 종류:
 

@@ -8,7 +8,7 @@ CLI / API / Fixture Runner
           ▼
    LangGraph Workflow
           │
-          ├── parse_request
+          ├── parse_request ─── LLM intent extraction + fallback parser
           ├── load_logs ─────── read_log_file
           ├── parse_logs ────── parse_access_log
           ├── filter_logs ───── filter_log_records
@@ -16,7 +16,7 @@ CLI / API / Fixture Runner
           ├── detect_anomalies  detect_log_anomalies
           ├── collect_evidence
           ├── validate_findings
-          └── generate_report
+          └── generate_report ─ LLM report synthesis + template fallback
           │
           ▼
    Trace Logger(JSONL)
@@ -40,26 +40,34 @@ CLI / API / Fixture Runner
 - edge routing
 - error handling
 
-## 2.3 Tool Layer
+## 2.3 LLM Layer
+
+- OpenAI-compatible Chat Completions client
+- request intent extraction
+- final report synthesis
+- `llm_start` / `llm_end` / `llm_error` / `llm_skipped` trace events
+- deterministic fallback when API key is missing
+
+## 2.4 Tool Layer
 
 - deterministic log processing tools
 - Pydantic input/output schema
 - structured errors
 
-## 2.4 State Layer
+## 2.5 State Layer
 
 - WebLogAnalysisState
 - state validation
 - state redaction for trace
 
-## 2.5 Trace Layer
+## 2.6 Trace Layer
 
 - JSONL event writer
 - event schema
 - event correlation
 - trace validation
 
-## 2.6 Report Layer
+## 2.7 Report Layer
 
 - markdown report builder
 - evidence formatting
@@ -103,10 +111,11 @@ Scenario YAML
 
 ## 6. MVP 구현 방식
 
-초기에는 실제 LLM 호출 의존도를 낮춘다.
+MVP도 실제 LLM 연결을 지원한다. 다만 CI와 fixture 재현성을 위해 fallback 경로를 함께 제공한다.
 
-- request parsing은 rule-based + optional LLM
-- report generation은 template-based + optional LLM
-- drift fixture는 static trace 또는 fault injection으로 생성
+- 기본 실행: LLM 기반 request parsing + LLM 기반 report generation
+- API key 없음: deterministic fallback + `llm_skipped` trace
+- CI fixture: `--no-llm` 옵션으로 deterministic 실행 가능
+- drift fixture: static trace 또는 fault injection으로 생성
 
-이렇게 하면 Judge Agent 테스트가 재현 가능하다.
+이렇게 하면 실제 에이전트처럼 동작하면서도 Judge Agent 테스트는 재현 가능하다.

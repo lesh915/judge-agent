@@ -6,3 +6,8 @@ requires-python = ">=3.9"
 
 [project.scripts]
 weblog-agent = "reference_agent.weblog_agent.cli:main"
+
+[project.optional-dependencies]
+agent = ["langgraph>=0.2", "langchain-core>=0.3"]
+api = ["fastapi>=0.110", "uvicorn>=0.27"]
+

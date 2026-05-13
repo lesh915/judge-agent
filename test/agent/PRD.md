@@ -63,7 +63,7 @@ PR에서 agent prompt/tool/graph가 변경되면 fixture를 실행하고, Judge 
 
 ## 6.1 요청 파싱
 
-에이전트는 사용자 요청에서 다음을 추출해야 한다.
+에이전트는 LLM을 사용해 사용자 요청에서 다음을 추출해야 한다. API key가 없는 CI 환경에서는 deterministic fallback parser를 사용할 수 있지만, fallback 사용 여부는 trace에 기록해야 한다.
 
 - target endpoint/path
 - 분석 기간
@@ -171,6 +171,8 @@ Evidence 예:
 
 ## 6.9 Report 생성
 
+최종 리포트는 LLM을 사용해 생성하는 것을 기본으로 한다. 단, LLM이 설정되지 않았거나 실패한 경우 deterministic template fallback을 사용한다. 두 경우 모두 trace에 LLM 사용 여부를 기록한다.
+
 출력 형식:
 
 ```markdown
@@ -229,5 +231,7 @@ MVP fixture:
 - LangGraph workflow 동작
 - 5개 tool 구현
 - 정상 trace 1개, drift trace 5개 이상 생성
+- LLM 연결 설정 시 `llm_start`/`llm_end` event 생성
+- LLM 미설정 시 fallback으로 정상 동작하고 `llm_skipped` event 생성
 - sample report 생성
 - README와 개발 가이드 존재
