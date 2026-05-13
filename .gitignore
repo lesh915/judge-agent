@@ -1,0 +1,8 @@
+# Generated reference agent outputs
+reference_agent/weblog_agent/traces/*.jsonl
+reference_agent/weblog_agent/reports/*.md
+
+# Python cache
+__pycache__/
+*.py[cod]
+.pytest_cache/

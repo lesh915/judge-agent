@@ -1,0 +1,8 @@
+[project]
+name = "judge-agent-reference"
+version = "0.1.0"
+description = "Reference web log analysis agent for Judge Agent drift tests"
+requires-python = ">=3.9"
+
+[project.scripts]
+weblog-agent = "reference_agent.weblog_agent.cli:main"
