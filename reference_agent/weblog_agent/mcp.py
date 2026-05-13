@@ -1,29 +1,119 @@
 from __future__ import annotations
 
-from typing import Any, Dict
+import json
+import subprocess
+import sys
+import threading
+from typing import Any, Dict, List, Optional
 
 
-class MockMCPClient:
-    """Reference MCP client.
+class MCPClientError(RuntimeError):
+    pass
 
-    In production this would call MCP servers for deployment, ownership, and
-    service metadata. For repeatable fixtures it returns deterministic service
-    context while preserving explicit `mcp_call` trace events in the agent.
+
+class StdioMCPClient:
+    """Small functional MCP stdio client for the reference agent.
+
+    It starts the local MCP server (`python -m reference_agent.weblog_agent.mcp_server`)
+    and talks to it with JSON-RPC messages compatible with the MCP tool methods
+    used by this reference agent: initialize, tools/list, and tools/call.
     """
 
-    def get_service_context(self, path: str | None) -> Dict[str, Any]:
-        if path == "/api/payment":
-            return {
-                "service": "payment-api",
-                "owner": "payments-platform",
-                "recentDeployments": ["payment-api@2026.05.13-01"],
-                "dependencies": ["psp-gateway", "fraud-service"],
-                "slo": {"availability": "99.95%", "p95LatencyMs": 900},
-            }
-        return {
-            "service": "identity-api",
-            "owner": "identity-platform",
-            "recentDeployments": ["identity-api@2026.05.13-03", "session-store@2026.05.12-21"],
-            "dependencies": ["auth-provider", "session-store", "user-db"],
-            "slo": {"availability": "99.9%", "p95LatencyMs": 800},
-        }
+    def __init__(self, command: Optional[List[str]] = None):
+        self.command = command or [sys.executable, "-m", "reference_agent.weblog_agent.mcp_server"]
+        self._proc: Optional[subprocess.Popen[str]] = None
+        self._next_id = 1
+        self._lock = threading.Lock()
+        self.server_info: Dict[str, Any] = {}
+
+    @property
+    def server_name(self) -> str:
+        return self.server_info.get("serverInfo", {}).get("name", "weblog-service-context-mcp")
+
+    def start(self) -> None:
+        if self._proc and self._proc.poll() is None:
+            return
+        self._proc = subprocess.Popen(
+            self.command,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+        )
+        self.server_info = self._request("initialize", {"clientInfo": {"name": "weblog-react-agent", "version": "0.3.0"}})
+        self._notify("notifications/initialized", {})
+
+    def list_tools(self) -> Dict[str, Any]:
+        self.start()
+        return self._request("tools/list", {})
+
+    def call_tool(self, name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        self.start()
+        result = self._request("tools/call", {"name": name, "arguments": arguments})
+        if result.get("isError"):
+            raise MCPClientError(f"MCP tool returned error: {result}")
+        if "structuredContent" in result:
+            return result["structuredContent"]
+        content = result.get("content") or []
+        if content and content[0].get("type") == "text":
+            return json.loads(content[0].get("text") or "{}")
+        return result
+
+    def close(self) -> None:
+        proc = self._proc
+        self._proc = None
+        if not proc:
+            return
+        if proc.stdin:
+            try:
+                proc.stdin.close()
+            except Exception:
+                pass
+        try:
+            proc.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            proc.terminate()
+            try:
+                proc.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+        for stream in (proc.stdout, proc.stderr):
+            if stream:
+                try:
+                    stream.close()
+                except Exception:
+                    pass
+
+    def _request(self, method: str, params: Dict[str, Any]) -> Dict[str, Any]:
+        with self._lock:
+            if not self._proc or not self._proc.stdin or not self._proc.stdout:
+                raise MCPClientError("MCP process is not running")
+            request_id = self._next_id
+            self._next_id += 1
+            message = {"jsonrpc": "2.0", "id": request_id, "method": method, "params": params}
+            self._proc.stdin.write(json.dumps(message, ensure_ascii=False) + "\n")
+            self._proc.stdin.flush()
+            line = self._proc.stdout.readline()
+            if not line:
+                stderr = self._proc.stderr.read() if self._proc.stderr else ""
+                raise MCPClientError(f"MCP server closed without response. stderr={stderr}")
+            response = json.loads(line)
+            if response.get("id") != request_id:
+                raise MCPClientError(f"MCP response id mismatch: expected={request_id} response={response}")
+            if "error" in response:
+                raise MCPClientError(f"MCP error: {response['error']}")
+            return response.get("result", {})
+
+    def _notify(self, method: str, params: Dict[str, Any]) -> None:
+        if not self._proc or not self._proc.stdin:
+            raise MCPClientError("MCP process is not running")
+        message = {"jsonrpc": "2.0", "method": method, "params": params}
+        self._proc.stdin.write(json.dumps(message, ensure_ascii=False) + "\n")
+        self._proc.stdin.flush()
+
+    def __del__(self):
+        try:
+            self.close()
+        except Exception:
+            pass

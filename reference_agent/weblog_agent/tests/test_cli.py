@@ -22,6 +22,8 @@ class CliTests(unittest.TestCase):
             self.assertIn('tool_start', trace)
             self.assertIn('react_step', trace)
             self.assertIn('mcp_start', trace)
+            self.assertIn('tools/list', trace)
+            self.assertIn('tools/call', trace)
             self.assertIn('agent_components', trace)
 
 if __name__ == '__main__':

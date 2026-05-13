@@ -141,6 +141,6 @@ Agent component registry:
 - Prompt bundle: `SYSTEM_PROMPT`, `REACT_PROTOCOL`, `TOOL_POLICY`, `OUTPUT_CONTRACT`
 - Tools: deterministic log analysis tools
 - RAG: `LocalRunbookRetriever`
-- MCP: `MockMCPClient`
+- MCP: `StdioMCPClient` + local `mcp_server.py` exposing `initialize`, `tools/list`, and `tools/call`
 
 Judge Agent는 이 trajectory를 drift 분석 대상으로 삼는다.

@@ -117,9 +117,12 @@ RAG drift 예:
 
 ## 3.5 MCP
 
-MCP-style tool:
+MCP는 mock object가 아니라 실제 로컬 stdio MCP server/client로 동작한다.
 
-- `get_service_context`
+- Server: `python3 -m reference_agent.weblog_agent.mcp_server`
+- Client: `StdioMCPClient`
+- Protocol flow: `initialize` → `tools/list` → `tools/call`
+- Tool: `get_service_context`
 
 역할:
 
@@ -243,7 +246,8 @@ reference_agent/weblog_agent/
   prompts.py     # system/react/tool/output prompts
   tools.py       # deterministic log tools
   rag.py         # local runbook retriever
-  mcp.py         # mock MCP service context client
+  mcp.py         # stdio MCP client
+  mcp_server.py  # functional local MCP server exposing tools/list and tools/call
   state.py       # agent state
   trace.py       # JSONL trace logger
 ```

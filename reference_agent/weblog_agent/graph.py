@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 
 from . import tools
 from .llm import LLMClient, parse_json_object
-from .mcp import MockMCPClient
+from .mcp import StdioMCPClient
 from .prompts import OUTPUT_CONTRACT, REACT_PROTOCOL, SYSTEM_PROMPT, TOOL_POLICY
 from .rag import LocalRunbookRetriever
 from .reporting import build_report
@@ -49,7 +49,7 @@ class WebLogAnalysisAgent:
         llm: Optional[LLMClient] = None,
         use_llm: bool = True,
         retriever: Optional[LocalRunbookRetriever] = None,
-        mcp_client: Optional[MockMCPClient] = None,
+        mcp_client: Optional[StdioMCPClient] = None,
         max_steps: int = 10,
     ):
         self.trace = trace_logger
@@ -57,7 +57,7 @@ class WebLogAnalysisAgent:
         self.llm = llm or LLMClient()
         self.use_llm = use_llm
         self.retriever = retriever or LocalRunbookRetriever()
-        self.mcp = mcp_client or MockMCPClient()
+        self.mcp = mcp_client or StdioMCPClient()
         self.max_steps = max_steps
 
     def run(self, user_input: str, access_log_path: str, baseline_path: Optional[str] = None, log_format: str = "nginx_combined") -> WebLogAnalysisState:
@@ -94,6 +94,8 @@ class WebLogAnalysisAgent:
             self._node("handle_error", state, self.handle_error)
             self._edge("handle_error", "finalize", "error_report")
             self._node("finalize", state, self.finalize)
+        finally:
+            self.close()
         self.trace.emit("final_output", content=state.finalReport or "")
         self.trace.emit("run_end", status="completed" if not state.errors else "completed_with_errors")
         return state
@@ -117,19 +119,32 @@ class WebLogAnalysisAgent:
             self.trace.tool_error(eid, name, {"message": str(exc), "type": exc.__class__.__name__})
             raise
 
-    def _mcp_call(self, name: str, args: Dict[str, Any]) -> Dict[str, Any]:
-        eid = f"mcp-{name}"
-        self.trace.emit("mcp_start", event_id=eid, server="mock-service-catalog", method=name, arguments=args)
+    def _mcp_list_tools(self) -> Dict[str, Any]:
+        eid = "mcp-tools-list"
+        self.trace.emit("mcp_start", event_id=eid, server="weblog-service-context-mcp", method="tools/list", arguments={})
         try:
-            if name == "get_service_context":
-                out = self.mcp.get_service_context(args.get("path"))
-            else:
-                raise ValueError(f"unknown MCP method: {name}")
-            self.trace.emit("mcp_end", event_id=eid, server="mock-service-catalog", method=name, output=out)
+            out = self.mcp.list_tools()
+            self.trace.emit("mcp_end", event_id=eid, server=self.mcp.server_name, method="tools/list", output=out)
             return out
         except Exception as exc:
-            self.trace.emit("mcp_error", event_id=eid, server="mock-service-catalog", method=name, error={"type": exc.__class__.__name__, "message": str(exc)})
+            self.trace.emit("mcp_error", event_id=eid, server="weblog-service-context-mcp", method="tools/list", error={"type": exc.__class__.__name__, "message": str(exc)})
             raise
+
+    def _mcp_call(self, name: str, args: Dict[str, Any]) -> Dict[str, Any]:
+        eid = f"mcp-tools-call-{name}"
+        self.trace.emit("mcp_start", event_id=eid, server="weblog-service-context-mcp", method="tools/call", tool=name, arguments=args)
+        try:
+            out = self.mcp.call_tool(name, args)
+            self.trace.emit("mcp_end", event_id=eid, server=self.mcp.server_name, method="tools/call", tool=name, output=out)
+            return out
+        except Exception as exc:
+            self.trace.emit("mcp_error", event_id=eid, server="weblog-service-context-mcp", method="tools/call", tool=name, error={"type": exc.__class__.__name__, "message": str(exc)})
+            raise
+
+    def close(self) -> None:
+        close = getattr(self.mcp, "close", None)
+        if close:
+            close()
 
     def _llm_call(self, name: str, messages, response_format=None) -> Optional[Dict[str, Any]]:
         event_id = f"llm-{name}-{len(messages)}"
@@ -149,7 +164,8 @@ class WebLogAnalysisAgent:
             return None
 
     def initialize_agent(self, state: WebLogAnalysisState):
-        self.trace.emit("agent_components", llm={"provider": self.llm.config.provider, "model": self.llm.config.model}, prompt=["SYSTEM_PROMPT", "REACT_PROTOCOL", "TOOL_POLICY", "OUTPUT_CONTRACT"], tools=self.tool_names(), mcp_servers=["mock-service-catalog"], rag={"retriever": "LocalRunbookRetriever"})
+        mcp_tools = self._mcp_list_tools()
+        self.trace.emit("agent_components", llm={"provider": self.llm.config.provider, "model": self.llm.config.model}, prompt=["SYSTEM_PROMPT", "REACT_PROTOCOL", "TOOL_POLICY", "OUTPUT_CONTRACT"], tools=self.tool_names(), mcp_servers=[self.mcp.server_name], mcp_tools=mcp_tools.get("tools", []), rag={"retriever": "LocalRunbookRetriever"})
 
     def tool_names(self) -> List[str]:
         return ["parse_user_request", "read_log_file", "parse_access_log", "filter_log_records", "compute_log_metrics", "detect_log_anomalies", "retrieve_runbook", "get_service_context", "collect_evidence", "finish"]

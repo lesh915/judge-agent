@@ -124,3 +124,28 @@ This preserves the same node names and state contract:
 ```text
 initialize_agent -> react_agent -> validate_findings -> finalize -> END
 ```
+
+## Functional MCP server
+
+MCP is not a mock object. The reference agent starts a real local stdio MCP server:
+
+```bash
+python3 -m reference_agent.weblog_agent.mcp_server
+```
+
+The agent's `StdioMCPClient` sends JSON-RPC MCP-style messages:
+
+- `initialize`
+- `tools/list`
+- `tools/call` with `get_service_context`
+
+`get_service_context` returns service metadata used by the report:
+
+- service name
+- owner
+- recent deployments
+- dependencies
+- SLO
+- runbook references
+
+The trace records this as actual MCP traffic via `mcp_start` / `mcp_end` events for both `tools/list` and `tools/call`.
