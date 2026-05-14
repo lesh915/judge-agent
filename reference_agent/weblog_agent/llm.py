@@ -7,7 +7,7 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 
 
 DEFAULT_ENV_PATHS = (
@@ -16,7 +16,7 @@ DEFAULT_ENV_PATHS = (
 )
 
 
-def load_env_file(path: str | Path, *, override: bool = False) -> Dict[str, str]:
+def load_env_file(path: Union[str, Path], *, override: bool = False) -> Dict[str, str]:
     """Load KEY=VALUE pairs from an env file without requiring python-dotenv."""
 
     env_path = Path(path)

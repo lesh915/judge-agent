@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import sys
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 SERVICE_CONTEXTS: Dict[str, Dict[str, Any]] = {
     "/api/login": {
@@ -36,7 +36,7 @@ TOOLS = [
 ]
 
 
-def get_service_context(path: str | None) -> Dict[str, Any]:
+def get_service_context(path: Optional[str]) -> Dict[str, Any]:
     return SERVICE_CONTEXTS.get(path or "", {
         "service": "unknown-service",
         "owner": "unknown",
@@ -56,7 +56,7 @@ def _error(request_id: Any, code: int, message: str) -> Dict[str, Any]:
     return {"jsonrpc": "2.0", "id": request_id, "error": {"code": code, "message": message}}
 
 
-def handle(request: Dict[str, Any]) -> Dict[str, Any] | None:
+def handle(request: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     request_id = request.get("id")
     method = request.get("method")
     params = request.get("params") or {}
@@ -85,7 +85,18 @@ def handle(request: Dict[str, Any]) -> Dict[str, Any] | None:
     return _error(request_id, -32601, f"Unknown method: {method}")
 
 
+def _configure_stdio() -> None:
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure:
+            try:
+                reconfigure(encoding="utf-8")
+            except Exception:
+                pass
+
+
 def main() -> int:
+    _configure_stdio()
     for line in sys.stdin:
         line = line.strip()
         if not line:

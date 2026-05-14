@@ -14,13 +14,25 @@ reference_agent/weblog_agent TraceLogger JSONL
 
 ## Run reference fixtures
 
+macOS/Linux:
+
 ```bash
 python3 -m reference_agent.weblog_agent.cli run-all \
   --no-llm \
   --output-dir artifacts/weblog-reference
 ```
 
+Windows PowerShell:
+
+```powershell
+py -m reference_agent.weblog_agent.cli run-all `
+  --no-llm `
+  --output-dir artifacts/weblog-reference
+```
+
 ## Analyze traces
+
+macOS/Linux:
 
 ```bash
 python3 -m simple.judge_agent_simple.cli analyze-batch \
@@ -31,10 +43,21 @@ python3 -m simple.judge_agent_simple.cli analyze-batch \
   --fail-on high
 ```
 
+Windows PowerShell:
+
+```powershell
+py -m simple.judge_agent_simple.cli analyze-batch `
+  --traces "artifacts/weblog-reference/*.jsonl" `
+  --adapter reference-weblog-jsonl `
+  --output artifacts/simple-judge/report.md `
+  --json artifacts/simple-judge/findings.json `
+  --fail-on high
+```
+
 If installed as a package, the same CLI is available as:
 
 ```bash
-judge-agent-simple analyze-batch --traces 'artifacts/weblog-reference/*.jsonl'
+judge-agent-simple analyze-batch --traces "artifacts/weblog-reference/*.jsonl"
 ```
 
 ## Implemented checks

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, List, Optional, Union
 
 from .schema import SimpleAgentRun, SimpleEvent
 
@@ -12,7 +12,7 @@ class ReferenceAgentJsonlAdapter:
 
     name = "reference-weblog-jsonl"
 
-    def load(self, path: str | Path) -> SimpleAgentRun:
+    def load(self, path: Union[str, Path]) -> SimpleAgentRun:
         trace_path = Path(path)
         raw_events = self._read_jsonl(trace_path)
         if not raw_events:
@@ -82,7 +82,7 @@ class ReferenceAgentJsonlAdapter:
         elif event_type == "final_output":
             run.final_output = raw.get("content")
 
-    def _normalize_event(self, raw: Dict[str, Any]) -> SimpleEvent | None:
+    def _normalize_event(self, raw: Dict[str, Any]) -> Optional[SimpleEvent]:
         event_type = raw.get("type")
         event_id = str(raw.get("event_id") or f"{event_type}-{raw.get('timestamp', '')}")
         ts = raw.get("timestamp")

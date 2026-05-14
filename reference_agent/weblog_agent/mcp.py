@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import threading
@@ -33,13 +34,22 @@ class StdioMCPClient:
     def start(self) -> None:
         if self._proc and self._proc.poll() is None:
             return
+        env = os.environ.copy()
+        env.setdefault("PYTHONIOENCODING", "utf-8")
+        popen_kwargs: Dict[str, Any] = {}
+        if sys.platform == "win32":
+            popen_kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
         self._proc = subprocess.Popen(
             self.command,
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
+            encoding="utf-8",
+            errors="replace",
             bufsize=1,
+            env=env,
+            **popen_kwargs,
         )
         self.server_info = self._request("initialize", {"clientInfo": {"name": "weblog-react-agent", "version": "0.3.0"}})
         self._notify("notifications/initialized", {})

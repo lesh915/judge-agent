@@ -94,11 +94,22 @@ API key가 없거나 `--no-llm`을 쓰면 deterministic fallback policy로 ReAct
 
 ## Run
 
+macOS/Linux:
+
 ```bash
 python3 -m reference_agent.weblog_agent.cli list-fixtures
 python3 -m reference_agent.weblog_agent.cli run-fixture normal-login-error-spike
 python3 -m reference_agent.weblog_agent.cli run-fixture normal-login-error-spike --no-llm
 python3 -m reference_agent.weblog_agent.cli run-all --no-llm
+```
+
+Windows PowerShell:
+
+```powershell
+py -m reference_agent.weblog_agent.cli list-fixtures
+py -m reference_agent.weblog_agent.cli run-fixture normal-login-error-spike
+py -m reference_agent.weblog_agent.cli run-fixture normal-login-error-spike --no-llm
+py -m reference_agent.weblog_agent.cli run-all --no-llm
 ```
 
 Custom analysis:

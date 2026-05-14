@@ -15,7 +15,7 @@ class SimpleJudgeTests(unittest.TestCase):
         proc = subprocess.run([
             sys.executable, '-m', 'reference_agent.weblog_agent.cli', 'run-fixture', fixture_id,
             '--output-dir', str(output_dir), '--no-llm'
-        ], capture_output=True, text=True)
+        ], capture_output=True, text=True, encoding="utf-8")
         self.assertEqual(proc.returncode, 0, proc.stderr)
         return Path(json.loads(proc.stdout)['trace_path'])
 
@@ -52,9 +52,11 @@ class SimpleJudgeTests(unittest.TestCase):
             findings = root / 'findings.json'
             proc = subprocess.run([
                 sys.executable, '-m', 'simple.judge_agent_simple.cli', 'analyze-batch',
-                '--traces', str(root / 'fixtures' / '*.jsonl'),
+                # Simulate a pattern copied into Windows cmd.exe, where single quotes
+                # are passed literally instead of being consumed by the shell.
+                '--traces', "'" + str(root / 'fixtures' / '*.jsonl') + "'",
                 '--output', str(report), '--json', str(findings), '--fail-on', 'critical'
-            ], capture_output=True, text=True)
+            ], capture_output=True, text=True, encoding="utf-8")
             self.assertEqual(proc.returncode, 0, proc.stderr)
             self.assertTrue(report.exists())
             self.assertTrue(findings.exists())

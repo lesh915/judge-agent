@@ -8,7 +8,7 @@ from pathlib import Path
 class CliTests(unittest.TestCase):
     def test_run_fixture_creates_trace_and_report(self):
         with tempfile.TemporaryDirectory() as td:
-            proc = subprocess.run([sys.executable, '-m', 'reference_agent.weblog_agent.cli', 'run-fixture', 'normal-login-error-spike', '--output-dir', td, '--no-llm'], capture_output=True, text=True)
+            proc = subprocess.run([sys.executable, '-m', 'reference_agent.weblog_agent.cli', 'run-fixture', 'normal-login-error-spike', '--output-dir', td, '--no-llm'], capture_output=True, text=True, encoding="utf-8")
             self.assertEqual(proc.returncode, 0, proc.stderr)
             data = json.loads(proc.stdout)
             self.assertTrue(Path(data['trace_path']).exists())
@@ -40,7 +40,7 @@ class CliTests(unittest.TestCase):
                 '--trace-dir', str(trace_dir),
                 '--report-dir', str(report_dir),
                 '--no-llm',
-            ], input=user_script, capture_output=True, text=True)
+            ], input=user_script, capture_output=True, text=True, encoding="utf-8")
             self.assertEqual(proc.returncode, 0, proc.stderr)
             first_line = proc.stdout.splitlines()[0]
             data = json.loads(first_line)
@@ -68,8 +68,8 @@ class CliTests(unittest.TestCase):
             subprocess.run([
                 sys.executable, '-m', 'reference_agent.weblog_agent.cli', 'chat',
                 '--session-id', 'listed-chat', '--session-dir', str(session_dir), '--no-llm'
-            ], input='/exit\n', capture_output=True, text=True, check=True)
-            proc = subprocess.run([sys.executable, '-m', 'reference_agent.weblog_agent.cli', 'list-sessions', '--session-dir', str(session_dir)], capture_output=True, text=True)
+            ], input='/exit\n', capture_output=True, text=True, encoding="utf-8", check=True)
+            proc = subprocess.run([sys.executable, '-m', 'reference_agent.weblog_agent.cli', 'list-sessions', '--session-dir', str(session_dir)], capture_output=True, text=True, encoding="utf-8")
             self.assertEqual(proc.returncode, 0, proc.stderr)
             data = json.loads(proc.stdout)
             self.assertEqual(data[0]['session_id'], 'listed-chat')

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Iterable, List
+from typing import Iterable, List, Union
 
 from .schema import AnalysisResult, Finding
 
@@ -55,12 +55,12 @@ def markdown_report(results: List[AnalysisResult]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
-def write_json(results: List[AnalysisResult], path: str | Path) -> None:
+def write_json(results: List[AnalysisResult], path: Union[str, Path]) -> None:
     data = {"results": [result.to_dict() for result in results]}
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     Path(path).write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def write_markdown(results: List[AnalysisResult], path: str | Path) -> None:
+def write_markdown(results: List[AnalysisResult], path: Union[str, Path]) -> None:
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     Path(path).write_text(markdown_report(results), encoding="utf-8")

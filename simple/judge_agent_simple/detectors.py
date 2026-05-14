@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from .schema import Finding, SimpleAgentRun
 
@@ -17,7 +17,7 @@ REQUIRED_SECTIONS = [
 ]
 
 
-def target_path(text: str | None) -> Optional[str]:
+def target_path(text: Optional[str]) -> Optional[str]:
     if not text:
         return None
     m = re.search(r"(/[A-Za-z0-9_./-]+)", text)
@@ -84,7 +84,7 @@ class ReferenceWebLogDetector:
 
     def parse_error_handling(self, run: SimpleAgentRun, start: int) -> List[Finding]:
         findings: List[Finding] = []
-        worst: tuple[int, int] | None = None
+        worst: Optional[Tuple[int, int]] = None
         repeated = 0
         for event in run.raw_by_type("tool_end"):
             if event.get("tool") != "parse_access_log":

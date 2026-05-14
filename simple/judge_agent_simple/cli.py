@@ -11,15 +11,36 @@ from .analyzer import analyze_trace, analyze_traces
 from .reporter import markdown_report, write_json, write_markdown
 
 
+def _configure_output_encoding() -> None:
+    """Use UTF-8 so Korean reports/JSON do not fail on non-UTF-8 Windows consoles."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure:
+            try:
+                reconfigure(encoding="utf-8")
+            except Exception:
+                pass
+
+
+def _strip_shell_quotes(value: str) -> str:
+    # Windows cmd.exe does not treat single quotes as quoting characters.
+    # Accept both forms so examples copied from POSIX shells still work.
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+        return value[1:-1]
+    return value
+
+
 def expand_trace_args(values: List[str]) -> List[str]:
     paths: List[str] = []
     for value in values:
+        value = _strip_shell_quotes(value)
         matches = sorted(glob.glob(value))
         paths.extend(matches or [value])
     return paths
 
 
 def main(argv=None) -> int:
+    _configure_output_encoding()
     parser = argparse.ArgumentParser(prog="judge-agent-simple", description="Simple Judge Agent MVP for reference weblog traces")
     sub = parser.add_subparsers(dest="command", required=True)
 

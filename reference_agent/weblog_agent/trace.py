@@ -5,7 +5,7 @@ import re
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Union
 
 SECRET_PATTERNS = [
     re.compile(r"(?i)(api[_-]?key|token|secret|password)=([^&\s]+)"),
@@ -26,7 +26,7 @@ def redact(value: Any) -> Any:
 
 
 class TraceLogger:
-    def __init__(self, path: str | Path, run_id: Optional[str] = None):
+    def __init__(self, path: Union[str, Path], run_id: Optional[str] = None):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.run_id = run_id or f"run-{uuid.uuid4().hex[:8]}"

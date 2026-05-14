@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 DEFAULT_RUNBOOK = """
 # Web Service Incident Runbook
@@ -35,7 +35,7 @@ class LocalRunbookRetriever:
     a retriever tool. The implementation is deterministic for fixture stability.
     """
 
-    def __init__(self, runbook_path: str | None = None):
+    def __init__(self, runbook_path: Optional[str] = None):
         self.runbook_path = Path(runbook_path) if runbook_path else None
         self.source = str(self.runbook_path) if self.runbook_path else "embedded:web-service-runbook"
         self.text = self.runbook_path.read_text(encoding="utf-8") if self.runbook_path and self.runbook_path.exists() else DEFAULT_RUNBOOK

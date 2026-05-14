@@ -4,6 +4,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
+from typing import Optional
 
 from .chat_agent import ChatAgent
 from .fixtures import FIXTURE_DIR, REPORT_DIR, TRACE_DIR, fixtures
@@ -12,7 +13,18 @@ from .session import ChatSessionState, list_sessions, load_session, new_session_
 from .trace import TraceLogger
 
 
-def run_fixture(fixture_id: str, output_dir: Path | None = None, use_llm: bool = True) -> int:
+def _configure_output_encoding() -> None:
+    """Use UTF-8 for machine-readable CLI output on Windows and Unix."""
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure:
+            try:
+                reconfigure(encoding="utf-8")
+            except Exception:
+                pass
+
+
+def run_fixture(fixture_id: str, output_dir: Optional[Path] = None, use_llm: bool = True) -> int:
     all_fixtures = fixtures()
     if fixture_id not in all_fixtures:
         print(f"Unknown fixture: {fixture_id}")
@@ -36,7 +48,7 @@ def run_fixture(fixture_id: str, output_dir: Path | None = None, use_llm: bool =
     return 0
 
 
-def run_all(output_dir: Path | None = None, use_llm: bool = True) -> int:
+def run_all(output_dir: Optional[Path] = None, use_llm: bool = True) -> int:
     code = 0
     for fixture_id in fixtures():
         code = max(code, run_fixture(fixture_id, output_dir, use_llm=use_llm))
@@ -59,11 +71,11 @@ def run_analysis(user_input: str, access_log: Path, trace_path: Path, report_pat
 
 def run_chat(
     access_log: Path,
-    session_id: str | None = None,
+    session_id: Optional[str] = None,
     new_session: bool = False,
-    session_dir: Path | None = None,
-    trace_dir: Path | None = None,
-    report_dir: Path | None = None,
+    session_dir: Optional[Path] = None,
+    trace_dir: Optional[Path] = None,
+    report_dir: Optional[Path] = None,
     use_llm: bool = True,
 ) -> int:
     session_dir = session_dir or (TRACE_DIR.parent / "sessions")
@@ -118,6 +130,7 @@ def run_chat(
 
 
 def main(argv=None) -> int:
+    _configure_output_encoding()
     parser = argparse.ArgumentParser(prog="weblog-agent", description="Web Log Analysis Reference Agent")
     sub = parser.add_subparsers(dest="command", required=True)
     p_run = sub.add_parser("run-fixture")
