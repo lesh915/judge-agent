@@ -1,5 +1,20 @@
 # Simple Architecture: LangChain/LangGraph Judge Agent
 
+## 0. Reference Agent 구현 반영 사항 (2026-05-14)
+
+현재 repo에는 Simple Judge Agent가 먼저 분석해야 할 reference trace producer가 구현되어 있다.
+
+```text
+reference_agent/weblog_agent
+  -> TraceLogger JSONL
+  -> ReferenceAgentJsonlAdapter   # Simple MVP 1순위 adapter
+  -> SimpleAgentRun Normalizer
+  -> fixture 기반 rule checkers
+  -> report / findings
+```
+
+따라서 초기 architecture에는 기존 `LangSmithAdapter`, `LangChainJsonlAdapter`, `LangGraphJsonlAdapter`에 더해 `ReferenceAgentJsonlAdapter`를 추가한다. 이 adapter는 `run_start`, `instruction_snapshot`, `agent_components`, `react_step`, `tool_*`, `mcp_*`, `validation_result`, `final_output`, `chat_*` 이벤트를 canonical event로 정규화한다.
+
 ## 1. 목적
 
 이 문서는 LangChain/LangGraph agent를 대상으로 한 심플한 Judge Agent 아키텍처를 정의한다.
@@ -50,9 +65,10 @@ CI Gate 또는 개발자 리뷰
 
 초기 지원 trace source:
 
-1. LangSmith run export
-2. LangChain callback JSONL
-3. LangGraph custom event JSONL
+1. Reference Agent JSONL (`reference_agent/weblog_agent/traces/*.jsonl`)
+2. LangGraph custom event JSONL
+3. LangChain callback JSONL
+4. LangSmith run export
 
 ## 3.2 Adapters
 
@@ -68,9 +84,10 @@ interface TraceAdapter {
 
 초기 adapter:
 
-- `LangSmithAdapter`
-- `LangChainJsonlAdapter`
+- `ReferenceAgentJsonlAdapter`
 - `LangGraphJsonlAdapter`
+- `LangChainJsonlAdapter`
+- `LangSmithAdapter`
 
 ## 3.3 Normalizer
 
@@ -179,7 +196,7 @@ Pull Request
 
 ## 6. Event Types
 
-초기 event type:
+초기 normalized event type:
 
 - `llm_call`
 - `tool_call`
@@ -188,8 +205,12 @@ Pull Request
 - `memory`
 - `graph_node`
 - `graph_edge`
+- `validation`
+- `chat_turn`
 - `error`
 - `final_output`
+
+Reference raw event는 `run_start`, `instruction_snapshot`, `agent_components`, `react_step`, `observation`, `tool_start`, `tool_end`, `mcp_start`, `mcp_end`, `validation_result`, `final_output`, `chat_*`를 포함한다.
 
 ## 7. Finding 출력
 
@@ -253,18 +274,20 @@ judge-agent-simple compare \
 ### Phase 1
 
 - schema
-- trace reader
+- Reference Agent JSONL trace reader
+- `ReferenceAgentJsonlAdapter`
 - markdown/json reporter
 
 ### Phase 2
 
-- LangSmithAdapter
-- LangChain/LangGraph JSONL adapter
+- WebLog reference fixture 기반 rule checkers
+- basic metrics
+- chat trace 최소 분석
 
 ### Phase 3
 
-- rule checkers
-- basic metrics
+- LangGraph/LangChain JSONL adapter
+- LangSmithAdapter
 
 ### Phase 4
 

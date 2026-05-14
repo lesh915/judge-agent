@@ -1,5 +1,17 @@
 # Simple PRD: LangChain/LangGraph Judge Agent
 
+## 0. Reference Agent 구현 반영 사항 (2026-05-14)
+
+Simple 개발 시작 전 `reference_agent/weblog_agent`가 먼저 구현되었다. 따라서 MVP의 1차 검증 대상과 입력 우선순위를 다음처럼 조정한다.
+
+- 1차 입력: `reference_agent/weblog_agent`가 생성하는 canonical JSONL trace
+- 1차 대상 agent: `weblog-react-agent`
+- 1차 실행 방식: `run-fixture`, `run-all`, `analyze`, `chat`
+- 1차 drift fixture: output contract 위반, wrong endpoint, parse error ignored, validation skipped, metric hallucination
+- LangSmith/LangChain generic adapter는 reference JSONL adapter 이후 확장한다.
+
+상세 변경사항은 `simple/REFERENCE_AGENT_IMPLEMENTATION_UPDATE.md`와 `docs/DRIFT_TELEMETRY_INTEGRATION_GUIDE.md`를 기준으로 한다.
+
 ## 1. 개요
 
 Simple Judge Agent는 **LangChain/LangGraph로 만들어진 agent**의 실행 trace를 분석하여 agent drift를 탐지, 분석, 리포팅하는 최소 제품이다.
@@ -143,9 +155,10 @@ LangGraph node/edge 실행이 기대 workflow에서 벗어나는 현상.
 
 지원 입력:
 
-- LangSmith run export JSON
-- LangChain callback JSONL
+- Reference Agent JSONL trace (`reference_agent/weblog_agent/traces/*.jsonl`)
 - LangGraph custom event JSONL
+- LangChain callback JSONL
+- LangSmith run export JSON
 - manually exported trace JSON
 
 ### 7.2 Normalization
@@ -219,9 +232,9 @@ Release gate:
 
 MVP 완료 조건:
 
-- LangSmith trace JSON을 입력받아 분석 가능
-- LangGraph node/tool sequence를 event로 복원 가능
-- 최소 5개 drift detector 동작
+- Reference Agent JSONL trace를 입력받아 분석 가능
+- WebLog ReAct node/tool/RAG/MCP/chat sequence를 event로 복원 가능
+- reference fixture 기준 최소 5개 drift detector 동작
 - Markdown report와 JSON findings 생성
 - baseline/current 비교 가능
 - CI에서 exit code로 pass/block 반환 가능

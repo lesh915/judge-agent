@@ -1,25 +1,45 @@
 # Simple Development Guide: LangChain/LangGraph Judge Agent
 
+## 0. Reference Agent 구현 반영 사항 (2026-05-14)
+
+개발 우선순위는 기존의 범용 LangSmith adapter 중심에서, 현재 구현된 `reference_agent/weblog_agent` trace를 먼저 분석하는 방식으로 조정한다.
+
+Phase 1에서 반드시 구현할 것:
+
+1. `ReferenceAgentJsonlAdapter`
+2. `TraceLogger` JSONL reader
+3. WebLog fixture 기반 detector
+   - output contract checker
+   - wrong endpoint checker
+   - metric consistency checker
+   - validation node checker
+   - parse error handling checker
+4. `chat_*` 이벤트를 읽는 최소 chat context checker
+5. `python3 -m reference_agent.weblog_agent.cli run-all --no-llm` 산출물을 입력으로 분석하는 CLI
+
+범용 `LangSmithAdapter`는 Phase 1 완료 후 확장한다.
+
 ## 1. 개발 목표
 
 LangChain/LangGraph agent의 trace를 입력받아 drift finding을 생성하는 최소 구현을 만든다.
 
 초기 목표:
 
-- LangSmith trace JSON 읽기
-- LangChain/LangGraph event를 공통 event로 변환
-- rule checker 5개 이상 구현
-- LLM judge 기반 quality 평가 2개 이상 구현
+- Reference Agent JSONL trace 읽기
+- `TraceLogger` raw event를 공통 event로 변환
+- WebLog fixture 기반 rule checker 5개 이상 구현
 - Markdown/JSON report 생성
+- 이후 LangGraph/LangChain/LangSmith adapter와 LLM judge를 확장
 
 ## 2. 권장 프로젝트 구조
 
 ```text
 src/
   adapters/
-    langsmith_adapter.ts
-    langchain_jsonl_adapter.ts
+    reference_agent_jsonl_adapter.ts
     langgraph_jsonl_adapter.ts
+    langchain_jsonl_adapter.ts
+    langsmith_adapter.ts
   schema/
     simple_agent_run.ts
     finding.ts
@@ -265,21 +285,22 @@ judge-agent-simple analyze --trace trace.json --framework langgraph
 ### Step 1
 
 - schema 정의
-- JSON/JSONL reader
+- Reference Agent JSONL reader
 - markdown/json reporter
 
 ### Step 2
 
-- LangSmith adapter
-- LangChain callback adapter
-- LangGraph event adapter
+- `ReferenceAgentJsonlAdapter` 구현
+- `run_start` / `instruction_snapshot` / `agent_components` / `final_output` 추출
+- `tool_*` / `node_*` / `edge_selected` / `validation_result` 정규화
 
 ### Step 3
 
-- rule checker 5개 구현
+- WebLog fixture 기준 rule checker 5개 구현
 
 ### Step 4
 
+- LangGraph/LangChain/LangSmith adapter 확장
 - LLM judge 2개 구현
 
 ### Step 5

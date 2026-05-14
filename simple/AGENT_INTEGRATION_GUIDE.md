@@ -1,14 +1,32 @@
 # Simple Agent Integration Guide: LangChain/LangGraph
 
+## 0. Reference Agent 구현 반영 사항 (2026-05-14)
+
+현재 기준 integration contract의 canonical example은 `reference_agent/weblog_agent/trace.py`의 `TraceLogger`가 생성하는 JSONL이다. 다른 agent에 drift 탐지 연동을 설명할 때는 먼저 이 reference telemetry contract를 기준으로 한다.
+
+초기 연동 방식 우선순위:
+
+1. Reference Agent JSONL (`TraceLogger.emit()` 기반)
+2. LangGraph custom event JSONL
+3. LangChain callback JSONL
+4. LangSmith trace export
+
+다른 agent 개발자에게 안내할 핵심 문장:
+
+> Agent 실행 entrypoint에서 trace logger를 만들고, LLM/Tool/RAG/MCP/Graph/Validation/Final output의 핵심 순간에 event를 남기는 코드가 drift 탐지용 데이터 전송 코드다.
+
+상세 코드는 `docs/DRIFT_TELEMETRY_INTEGRATION_GUIDE.md`를 따른다.
+
 ## 1. 목적
 
 이 문서는 LangChain/LangGraph agent에서 Judge Agent가 drift 탐지에 필요한 값을 어떻게 수집할지 정리한다.
 
-초기 연동 방식은 3가지만 지원한다.
+초기 연동 방식은 4가지를 지원하되, 구현 우선순위는 reference trace를 먼저 둔다.
 
-1. LangSmith trace export
-2. LangChain callback JSONL
-3. LangGraph custom event JSONL
+1. Reference Agent JSONL (`TraceLogger` canonical event)
+2. LangGraph custom event JSONL
+3. LangChain callback JSONL
+4. LangSmith trace export
 
 ## 2. 수집해야 하는 값
 
@@ -230,11 +248,12 @@ context drift를 탐지하려면 retriever 결과를 다음처럼 저장한다.
 
 ## 10. 우선순위
 
-MVP에서는 LangSmith trace export를 1순위로 지원한다.
+MVP에서는 현재 repo에서 재현 가능한 Reference Agent JSONL을 1순위로 지원한다.
 
 그 다음 순서:
 
-1. LangSmithAdapter
-2. LangChain JSONL Adapter
-3. LangGraph JSONL Adapter
-4. Generic OTel GenAI Adapter
+1. ReferenceAgentJsonlAdapter
+2. LangGraph JSONL Adapter
+3. LangChain JSONL Adapter
+4. LangSmithAdapter
+5. Generic OTel GenAI Adapter

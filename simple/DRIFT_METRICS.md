@@ -1,5 +1,22 @@
 # Simple Drift Metrics: LangChain/LangGraph
 
+## 0. Reference Agent 구현 반영 사항 (2026-05-14)
+
+우선 구현 metric은 실제 WebLog Reference Agent fixture에서 바로 검증 가능한 항목으로 재정렬한다.
+
+최우선 metric/checker:
+
+1. `output_contract_compliance` — final report 필수 section 준수
+2. `target_endpoint_consistency` — user targetPath, filter argument, metrics top_paths 일치
+3. `metric_result_consistency` — tool 계산 metrics와 final output claim 일치
+4. `validation_path_coverage` — `validate_findings` node와 `validation_result` 존재
+5. `parse_error_handling_score` — parse error가 state/report/validation에 반영되는지
+6. `rag_context_presence_and_usage` — `retrieve_runbook` 결과와 report 반영
+7. `mcp_context_presence_and_usage` — service owner/SLO/dependency metadata 반영
+8. `chat_context_grounding` — follow-up 답변이 `last_analysis`에 근거하는지
+
+이 우선순위는 `reference_agent/weblog_agent/fixtures.py`의 drift fixture를 기준으로 한다.
+
 ## 1. 목적
 
 이 문서는 LangChain/LangGraph agent를 대상으로 우선 구현할 drift 탐지 지표를 정의한다.

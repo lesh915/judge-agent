@@ -1,5 +1,19 @@
 # Reference Target Agent: Web Log ReAct Agent
 
+## 0. 현재 구현 반영 사항 (2026-05-14)
+
+`reference_agent/weblog_agent`는 계획 문서 수준이 아니라 현재 동작하는 reference target agent다. 기존 단발 ReAct 분석뿐 아니라 대화형 wrapper도 구현되어 있다.
+
+추가/변경된 구현:
+
+- `chat_agent.py`: context-aware 대화형 wrapper
+- `session.py`: chat session 저장/복원
+- `cli.py chat`: interactive chat command
+- `cli.py list-sessions`: persisted session 목록
+- `docs/DRIFT_TELEMETRY_INTEGRATION_GUIDE.md`: drift telemetry 코드 위치와 이식 가이드
+
+현재 trace 요구사항에는 기존 ReAct 이벤트 외에 `chat_session_start`, `chat_turn_start`, `chat_intent_classified`, `chat_context_built`, `chat_analysis_invoked`, `chat_response_generated` 등 chat event가 포함된다.
+
 ## 1. 목적
 
 Judge Agent가 탐지/분석/리포팅할 대상은 단순 workflow가 아니라 **일반적인 LangChain/LangGraph 기반 AI Agent**다. 따라서 reference target agent도 다음 구성을 갖는 실제 동작 agent여야 한다.
@@ -223,6 +237,10 @@ Judge Agent 입력 trace는 최소 다음 이벤트를 포함해야 한다.
 - `mcp_start`, `mcp_end`, `mcp_error`
 - `validation_result`
 - `final_output`
+- `chat_session_start`, `chat_session_end`
+- `chat_turn_start`, `chat_turn_end`
+- `chat_intent_classified`, `chat_context_built`
+- `chat_analysis_invoked`, `chat_response_generated`
 
 ## 8. Judge Agent가 탐지해야 할 drift
 
@@ -250,6 +268,8 @@ reference_agent/weblog_agent/
   mcp_server.py  # functional local MCP server exposing tools/list and tools/call
   state.py       # agent state
   trace.py       # JSONL trace logger
+  chat_agent.py  # context-aware interactive wrapper
+  session.py     # persisted chat session state
 ```
 
 ## 10. LLM 연결 설정 정책

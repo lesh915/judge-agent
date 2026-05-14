@@ -1,5 +1,28 @@
 # Judge Agent 활용 시나리오: AI Agent DevOps / CI-CD 검증 프로세스
 
+## 0. Reference Agent 구현 반영 사항 (2026-05-14)
+
+CI/CD 예시는 현재 구현된 reference agent 명령을 기준으로 보강한다.
+
+Reference fixture 생성:
+
+```bash
+python3 -m reference_agent.weblog_agent.cli run-all --no-llm --output-dir artifacts/weblog-reference
+```
+
+Simple Judge Agent 분석 목표:
+
+```bash
+judge-agent-simple analyze-batch \
+  --traces artifacts/weblog-reference/*.jsonl \
+  --adapter reference-weblog-jsonl \
+  --output reports/judge-report.md \
+  --json reports/findings.json \
+  --fail-on high
+```
+
+대화형 agent regression은 `chat` 모드에서 생성되는 `*-chat.jsonl`과 `*-turn-N.jsonl`을 함께 분석한다.
+
 ## 1. 개요
 
 Judge Agent는 AI agent 개발에서 DevOps의 CI/CD 테스트·검증 프로세스와 유사한 역할을 수행할 수 있다.
@@ -423,13 +446,15 @@ jobs:
 
       - name: Run reference agent fixtures
         run: |
-          python reference-agents/weblog-analysis-agent/run_fixtures.py \
-            --output traces/current
+          python3 -m reference_agent.weblog_agent.cli run-all \
+            --no-llm \
+            --output-dir artifacts/weblog-reference
 
       - name: Analyze traces with Judge Agent
         run: |
           judge-agent-simple analyze-batch \
-            --traces traces/current \
+            --traces 'artifacts/weblog-reference/*.jsonl' \
+            --adapter reference-weblog-jsonl \
             --baseline baselines/main.json \
             --output reports/judge-report.md \
             --json reports/findings.json \
