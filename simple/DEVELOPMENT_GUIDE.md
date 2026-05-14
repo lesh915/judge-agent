@@ -16,6 +16,7 @@ Phase 1에서 반드시 구현할 것:
    - parse error handling checker
 4. `chat_*` 이벤트를 읽는 최소 chat context checker
 5. `python3 -m reference_agent.weblog_agent.cli run-all --no-llm` 산출물을 입력으로 분석하는 CLI
+6. 탐지 결과를 세션에 보관하고 후속 질문에 답하는 `JudgeChatAgent` 대화형 분석 레이어
 
 범용 `LangSmithAdapter`는 Phase 1 완료 후 확장한다.
 
@@ -29,6 +30,7 @@ LangChain/LangGraph agent의 trace를 입력받아 drift finding을 생성하는
 - `TraceLogger` raw event를 공통 event로 변환
 - WebLog fixture 기반 rule checker 5개 이상 구현
 - Markdown/JSON report 생성
+- 탐지된 finding을 대화형으로 분석하는 chat agent 제공
 - 이후 LangGraph/LangChain/LangSmith adapter와 LLM judge를 확장
 
 ## 2. 권장 프로젝트 구조
@@ -63,6 +65,9 @@ src/
   reports/
     markdown_reporter.ts
     json_reporter.ts
+  chat/
+    judge_chat_agent.ts
+    judge_session.ts
   cli.ts
 ```
 

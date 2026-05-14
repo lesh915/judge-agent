@@ -62,6 +62,23 @@ class SimpleJudgeTests(unittest.TestCase):
             self.assertTrue(findings.exists())
             self.assertIn('output_contract_compliance', report.read_text(encoding='utf-8'))
 
+    def test_chat_agent_analyzes_findings_conversationally(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            trace = self._run_fixture('drift-validation-skipped', root / 'fixtures')
+            session_dir = root / 'sessions'
+            proc = subprocess.run([
+                sys.executable, '-m', 'simple.judge_agent_simple.cli', 'chat',
+                '--traces', str(trace), '--session-id', 'judge-chat', '--session-dir', str(session_dir),
+            ], input='왜 block이야?\nvalidation_path_coverage 근거\n/exit\n', capture_output=True, text=True, encoding="utf-8")
+            self.assertEqual(proc.returncode, 0, proc.stderr)
+            self.assertIn('block의 직접 원인', proc.stdout)
+            self.assertIn('validation_path_coverage', proc.stdout)
+            self.assertIn('근거입니다', proc.stdout)
+            saved = json.loads((session_dir / 'judge-chat.json').read_text(encoding='utf-8'))
+            self.assertEqual(saved['last_intent'], 'evidence')
+            self.assertTrue(saved['analysis_results'])
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -8,7 +8,9 @@ from pathlib import Path
 from typing import List
 
 from .analyzer import analyze_trace, analyze_traces
+from .chat_agent import JudgeChatAgent
 from .reporter import markdown_report, write_json, write_markdown
+from .session import JudgeSessionState, load_session, save_session
 
 
 def _configure_output_encoding() -> None:
@@ -39,6 +41,48 @@ def expand_trace_args(values: List[str]) -> List[str]:
     return paths
 
 
+def run_chat(args) -> int:
+    session_dir = args.session_dir
+    if args.resume:
+        try:
+            session = load_session(session_dir, args.session_id)
+        except FileNotFoundError:
+            session = JudgeSessionState(session_id=args.session_id)
+    else:
+        session = JudgeSessionState(session_id=args.session_id)
+
+    agent = JudgeChatAgent(session)
+    if args.traces:
+        traces = expand_trace_args(args.traces)
+        results = analyze_traces(traces, adapter_name=args.adapter)
+        agent.load_analysis(results)
+    print(json.dumps({"session_id": session.session_id, "session_path": str(save_session(session_dir, session)), "status": "ready"}, ensure_ascii=False))
+    print(agent.welcome())
+    print("Commands: /summary, /findings, /runs, /exit")
+    for raw in sys.stdin:
+        user_input = raw.strip()
+        if not user_input:
+            continue
+        if user_input in {"/exit", "/quit"}:
+            break
+        if user_input == "/summary":
+            response = agent.handle_user_turn("전체 요약")
+        elif user_input == "/findings":
+            response = agent.handle_user_turn("finding 전체와 우선순위")
+        elif user_input == "/runs":
+            lines = []
+            for result in session.analysis_results:
+                run = result.get("run", {})
+                lines.append(f"- `{run.get('run_id')}` gate={result.get('gate')} score={result.get('score')} findings={len(result.get('findings', []))}")
+            response = "\n".join(lines) if lines else "로드된 run이 없습니다."
+        else:
+            response = agent.handle_user_turn(user_input)
+        print(response)
+        save_session(session_dir, session)
+    save_session(session_dir, session)
+    return 0
+
+
 def main(argv=None) -> int:
     _configure_output_encoding()
     parser = argparse.ArgumentParser(prog="judge-agent-simple", description="Simple Judge Agent MVP for reference weblog traces")
@@ -58,7 +102,16 @@ def main(argv=None) -> int:
     p_batch.add_argument("--json", type=Path)
     p_batch.add_argument("--fail-on", choices=["low", "medium", "high", "critical"], default="critical")
 
+    p_chat = sub.add_parser("chat", help="Start a conversational judge agent over analyzed traces")
+    p_chat.add_argument("--traces", nargs="+", help="Trace JSONL files or glob patterns to analyze before chat starts")
+    p_chat.add_argument("--adapter", default="reference-weblog-jsonl")
+    p_chat.add_argument("--session-id", default="default")
+    p_chat.add_argument("--session-dir", type=Path, default=Path("artifacts/simple-judge/sessions"))
+    p_chat.add_argument("--resume", action="store_true", help="Resume a saved judge chat session")
+
     args = parser.parse_args(argv)
+    if args.command == "chat":
+        return run_chat(args)
     if args.command == "analyze":
         results = [analyze_trace(args.trace, adapter_name=args.adapter)]
     else:

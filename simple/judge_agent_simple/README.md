@@ -9,7 +9,9 @@ reference_agent/weblog_agent TraceLogger JSONL
   -> ReferenceAgentJsonlAdapter
   -> SimpleAgentRun
   -> ReferenceWebLogDetector
-  -> Markdown / JSON report
+  -> AnalysisResult
+  -> JudgeChatAgent session
+  -> Markdown / JSON report or conversational drift analysis
 ```
 
 ## Run reference fixtures
@@ -59,6 +61,33 @@ If installed as a package, the same CLI is available as:
 ```bash
 judge-agent-simple analyze-batch --traces "artifacts/weblog-reference/*.jsonl"
 ```
+
+## Conversational judge agent
+
+The `chat` command starts an agent session over the detected findings. It keeps session state, classifies follow-up questions, selects relevant findings, and answers with evidence/recommendations instead of only printing a static report.
+
+macOS/Linux:
+
+```bash
+python3 -m simple.judge_agent_simple.cli chat \
+  --traces 'artifacts/weblog-reference/*.jsonl' \
+  --session-id weblog-drift-review
+```
+
+Windows PowerShell:
+
+```powershell
+py -m simple.judge_agent_simple.cli chat `
+  --traces "artifacts/weblog-reference/*.jsonl" `
+  --session-id weblog-drift-review
+```
+
+Example questions:
+
+- `왜 block이야?`
+- `validation_path_coverage 근거 보여줘`
+- `JD-001 수정 우선순위는?`
+- `metric hallucination의 원인은?`
 
 ## Implemented checks
 

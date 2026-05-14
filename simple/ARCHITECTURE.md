@@ -10,7 +10,9 @@ reference_agent/weblog_agent
   -> ReferenceAgentJsonlAdapter   # Simple MVP 1순위 adapter
   -> SimpleAgentRun Normalizer
   -> fixture 기반 rule checkers
-  -> report / findings
+  -> AnalysisResult
+  -> JudgeChatAgent               # finding을 대화형으로 분석
+  -> report / findings / conversational review
 ```
 
 따라서 초기 architecture에는 기존 `LangSmithAdapter`, `LangChainJsonlAdapter`, `LangGraphJsonlAdapter`에 더해 `ReferenceAgentJsonlAdapter`를 추가한다. 이 adapter는 `run_start`, `instruction_snapshot`, `agent_components`, `react_step`, `tool_*`, `mcp_*`, `validation_result`, `final_output`, `chat_*` 이벤트를 canonical event로 정규화한다.
@@ -26,6 +28,7 @@ reference_agent/weblog_agent
 - metric 계산
 - drift 탐지
 - finding 분석
+- finding 기반 대화형 원인/근거/수정 우선순위 분석
 - report 생성
 - CI 연동
 
@@ -51,6 +54,11 @@ Rule Checkers + LLM Judges
         │
         ▼
 Finding Aggregator
+        │
+        ├──► JudgeChatAgent Session
+        │       ├── intent classify
+        │       ├── finding focus/select
+        │       └── evidence-grounded response
         │
         ▼
 Markdown / JSON Report
