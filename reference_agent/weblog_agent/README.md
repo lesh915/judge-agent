@@ -114,6 +114,47 @@ Outputs:
 - `reference_agent/weblog_agent/traces/*.jsonl`
 - `reference_agent/weblog_agent/reports/*.md`
 
+## Interactive chat mode
+
+`chat` starts a context-aware interactive agent session. The existing one-shot ReAct analyzer is preserved, and chat mode wraps it with persisted conversation state so follow-up turns can use the previous analysis context.
+
+```bash
+python3 -m reference_agent.weblog_agent.cli chat \
+  --access-log reference_agent/weblog_agent/fixtures/access.log \
+  --session-id login-incident \
+  --no-llm
+```
+
+Example:
+
+```text
+you> 지난 1시간 동안 /api/login 5xx 에러율을 분석해주세요
+agent> 분석 완료: `/api/login` ...
+
+you> 방금 결과에서 가장 의심되는 원인은?
+agent> 이전 분석의 metrics/anomalies/RAG/MCP context를 기반으로 답변
+```
+
+Chat commands:
+
+- `/help` — available commands
+- `/summary` — latest compact analysis summary
+- `/reset` — clear session turns and prior analysis context
+- `/exit` or `/quit` — end the interactive session
+
+Session artifacts:
+
+- `reference_agent/weblog_agent/sessions/*.json` — bounded chat state
+- `reference_agent/weblog_agent/traces/*-chat.jsonl` — chat turn trace
+- `reference_agent/weblog_agent/traces/*-turn-N.jsonl` — child ReAct analysis trace
+- `reference_agent/weblog_agent/reports/*-turn-N.md` — child analysis report
+
+List sessions:
+
+```bash
+python3 -m reference_agent.weblog_agent.cli list-sessions
+```
+
 ## ReAct tools
 
 - `parse_user_request`
@@ -131,6 +172,12 @@ Outputs:
 
 Judge Agent가 drift를 분석할 때 보는 주요 이벤트:
 
+- `chat_session_start` / `chat_session_end`
+- `chat_turn_start` / `chat_turn_end`
+- `chat_intent_classified`
+- `chat_context_built`
+- `chat_analysis_invoked`
+- `chat_response_generated`
 - `run_start` / `run_end`
 - `agent_components`
 - `instruction_snapshot`
