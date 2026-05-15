@@ -160,6 +160,37 @@ LLM judge는 rubric 기반으로 품질을 평가한다.
 - JSON findings
 - metrics summary
 
+## 3.9 Metric Registry
+
+`judge_agent_simple.metrics`는 `docs/DRIFT_METRICS.xlsx`를 코드에 반영한 metric registry다.
+
+역할:
+
+- metric name → category/severity/measurement/priority metadata 제공
+- MVP 7개 metric과 Reference Agent 8개 metric coverage 검증
+- finding/report/conversation tool result에 metric metadata 부여
+- 대화형 agent가 priority/severity 기준으로 finding을 정렬하고 follow-up focus를 유지하도록 지원
+
+## 3.10 Tool-based Conversation Runtime
+
+`judge_agent_simple.conversation_agent.ToolBasedConversationAgent`는 LLM 없이 동작하는 첫 번째 일반 대화형 runtime이다.
+
+```text
+User Message
+  -> deterministic planner
+  -> metric-aware tool selection
+  -> tool execution
+  -> evidence/focus/session update
+  -> grounded response
+```
+
+주요 파일:
+
+- `conversation_state.py`: messages, loaded_traces, tool_calls, evidence, focused_metric 저장
+- `tools.py`: `load_traces`, `summarize_findings`, `get_finding`, `get_evidence`, `explain_gate`, `recommend_fix`, `compare_runs`
+- `conversation_agent.py`: tool-based planner/response runtime
+- CLI: `judge-agent-simple chat --mode deterministic-v2`
+
 ## 4. 데이터 흐름
 
 ## 4.1 분석 흐름
@@ -172,8 +203,22 @@ LLM judge는 rubric 기반으로 품질을 평가한다.
 5. rule checker 실행
 6. LLM judge 실행
 7. finding 병합
-8. score 계산
-9. report 생성
+8. metric registry metadata 부여
+9. score 계산
+10. report 생성
+```
+
+## 4.1.1 대화형 분석 흐름
+
+```text
+1. chat --mode deterministic-v2 시작
+2. trace load -> AnalysisResult -> ConversationState
+3. 사용자 질문 입력
+4. planner가 필요한 tool 선택
+5. tool이 finding/evidence/metric metadata 조회
+6. focused_metric / finding focus 업데이트
+7. grounded response 생성
+8. *.conversation.json session 저장
 ```
 
 ## 4.2 CI 흐름

@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import Iterable, List, Union
 
+from .metrics import get_metric
 from .schema import AnalysisResult, Finding
 
 
@@ -39,12 +40,22 @@ def markdown_report(results: List[AnalysisResult]) -> str:
         if not result.findings:
             lines.append("- No drift findings.")
         for finding in result.findings:
+            metric = get_metric(finding.metric)
+            priority = None
+            metric_category = finding.category
+            measurement = None
+            if metric:
+                priority = metric.mvp_priority or metric.ref_agent_priority
+                metric_category = metric.category
+                measurement = metric.measurement_method
             lines.extend([
                 f"#### {finding.id} {finding.metric}",
                 "",
-                f"- category: {finding.category}",
+                f"- category: {metric_category}",
                 f"- severity: {finding.severity}",
                 f"- confidence: {finding.confidence:.2f}",
+                f"- metric priority: {priority if priority is not None else 'n/a'}",
+                f"- measurement: {measurement or 'n/a'}",
                 f"- expected: {finding.expected}",
                 f"- actual: {finding.actual}",
                 "- evidence:",

@@ -312,6 +312,8 @@ python3 -m simple.judge_agent_simple.cli chat \
 
 ## Phase 1. Tool Registry 도입
 
+상태: **1차 구현 완료** (`metrics.py`, `tools.py`, `deterministic-v2`에서 사용)
+
 목표:
 
 - 기존 analyzer/detector/reporter 기능을 agent tool로 감싼다.
@@ -343,6 +345,8 @@ python3 -m simple.judge_agent_simple.cli chat \
 
 ## Phase 2. Conversation State / Session 확장
 
+상태: **1차 구현 완료** (`conversation_state.py`, `*.conversation.json` 저장)
+
 목표:
 
 - 일반 agent loop가 사용할 state 구조를 추가한다.
@@ -361,6 +365,8 @@ python3 -m simple.judge_agent_simple.cli chat \
 - 새 session 파일에 tool_calls/evidence 저장 가능
 
 ## Phase 3. Plain Conversational Agent Runtime 구현
+
+상태: **1차 구현 완료** (`conversation_agent.py`, `chat --mode deterministic-v2`)
 
 목표:
 
@@ -513,11 +519,14 @@ START
 
 ### PR 1: Tool Registry + State 확장
 
+상태: **완료**
+
 포함:
 
+- `metrics.py`
 - `tools.py`
 - `conversation_state.py`
-- 기존 `JudgeSessionState`와 호환
+- 기존 `JudgeSessionState`와 호환 가능한 migration path
 - unit tests
 
 제외:
@@ -527,6 +536,8 @@ START
 - 대규모 CLI 변경
 
 ### PR 2: Plain Conversation Agent Runtime
+
+상태: **완료**
 
 포함:
 

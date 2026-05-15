@@ -66,10 +66,16 @@ judge-agent-simple analyze-batch --traces "artifacts/weblog-reference/*.jsonl"
 
 The `chat` command starts an agent session over the detected findings. It keeps session state, classifies follow-up questions, selects relevant findings, and answers with evidence/recommendations instead of only printing a static report.
 
+Two modes are available:
+
+- `--mode deterministic` — legacy keyword-based conversational layer over analyzed findings.
+- `--mode deterministic-v2` — tool-based conversational runtime. It uses a metric registry from `docs/DRIFT_METRICS.xlsx`, records tool calls/evidence in conversation state, preserves focused metric/finding context, and can answer follow-up questions such as “그 근거는?” or “수정 우선순위는?”.
+
 macOS/Linux:
 
 ```bash
 python3 -m simple.judge_agent_simple.cli chat \
+  --mode deterministic-v2 \
   --traces 'artifacts/weblog-reference/*.jsonl' \
   --session-id weblog-drift-review
 ```
@@ -78,6 +84,7 @@ Windows PowerShell:
 
 ```powershell
 py -m simple.judge_agent_simple.cli chat `
+  --mode deterministic-v2 `
   --traces "artifacts/weblog-reference/*.jsonl" `
   --session-id weblog-drift-review
 ```
@@ -88,6 +95,18 @@ Example questions:
 - `validation_path_coverage 근거 보여줘`
 - `JD-001 수정 우선순위는?`
 - `metric hallucination의 원인은?`
+- `MVP 우선순위 기준으로 먼저 고칠 것 알려줘`
+- `그 근거는?`
+- `run 비교`
+
+## Metric registry
+
+`judge_agent_simple.metrics` contains the first implementation of the drift metric registry based on `docs/DRIFT_METRICS.xlsx`.
+
+Covered priority groups:
+
+- MVP metrics: `tool_argument_correctness`, `tool_error_handling_score`, `answer_context_groundedness`, `node_sequence_correctness`, `verification_coverage`, `instruction_adherence_score`, `redundant_tool_call_count`
+- Reference agent metrics: `output_contract_compliance`, `target_endpoint_consistency`, `metric_result_consistency`, `validation_path_coverage`, `parse_error_handling_score`, `rag_context_presence_and_usage`, `mcp_context_presence_and_usage`, `chat_context_grounding`
 
 ## Implemented checks
 

@@ -9,6 +9,8 @@ from typing import List
 
 from .analyzer import analyze_trace, analyze_traces
 from .chat_agent import JudgeChatAgent
+from .conversation_agent import ToolBasedConversationAgent
+from .conversation_state import ConversationState, load_conversation_state, save_conversation_state
 from .reporter import markdown_report, write_json, write_markdown
 from .session import JudgeSessionState, load_session, save_session
 
@@ -42,6 +44,9 @@ def expand_trace_args(values: List[str]) -> List[str]:
 
 
 def run_chat(args) -> int:
+    if args.mode == "deterministic-v2":
+        return run_conversation_chat(args)
+
     session_dir = args.session_dir
     if args.resume:
         try:
@@ -56,7 +61,7 @@ def run_chat(args) -> int:
         traces = expand_trace_args(args.traces)
         results = analyze_traces(traces, adapter_name=args.adapter)
         agent.load_analysis(results)
-    print(json.dumps({"session_id": session.session_id, "session_path": str(save_session(session_dir, session)), "status": "ready"}, ensure_ascii=False))
+    print(json.dumps({"session_id": session.session_id, "session_path": str(save_session(session_dir, session)), "status": "ready", "mode": args.mode}, ensure_ascii=False))
     print(agent.welcome())
     print("Commands: /summary, /findings, /runs, /exit")
     for raw in sys.stdin:
@@ -80,6 +85,46 @@ def run_chat(args) -> int:
         print(response)
         save_session(session_dir, session)
     save_session(session_dir, session)
+    return 0
+
+
+def run_conversation_chat(args) -> int:
+    session_dir = args.session_dir
+    if args.resume:
+        try:
+            state = load_conversation_state(session_dir, args.session_id)
+        except FileNotFoundError:
+            state = ConversationState(session_id=args.session_id)
+    else:
+        state = ConversationState(session_id=args.session_id)
+
+    agent = ToolBasedConversationAgent(state)
+    if args.traces:
+        traces = expand_trace_args(args.traces)
+        agent.load_analysis(traces, adapter_name=args.adapter)
+    session_path = save_conversation_state(session_dir, state)
+    print(json.dumps({"session_id": state.session_id, "session_path": str(session_path), "status": "ready", "mode": args.mode}, ensure_ascii=False))
+    print(agent.welcome())
+    print("Commands: /summary, /findings, /runs, /compare, /exit")
+    for raw in sys.stdin:
+        user_input = raw.strip()
+        if not user_input:
+            continue
+        if user_input in {"/exit", "/quit"}:
+            break
+        if user_input == "/summary":
+            response = agent.handle_user_turn("전체 요약")
+        elif user_input == "/findings":
+            response = agent.handle_user_turn("finding 전체와 우선순위")
+        elif user_input == "/runs":
+            response = agent.handle_user_turn("run 목록")
+        elif user_input == "/compare":
+            response = agent.handle_user_turn("run 비교")
+        else:
+            response = agent.handle_user_turn(user_input)
+        print(response)
+        save_conversation_state(session_dir, state)
+    save_conversation_state(session_dir, state)
     return 0
 
 
@@ -108,6 +153,7 @@ def main(argv=None) -> int:
     p_chat.add_argument("--session-id", default="default")
     p_chat.add_argument("--session-dir", type=Path, default=Path("artifacts/simple-judge/sessions"))
     p_chat.add_argument("--resume", action="store_true", help="Resume a saved judge chat session")
+    p_chat.add_argument("--mode", choices=["deterministic", "deterministic-v2"], default="deterministic", help="Chat runtime mode. deterministic keeps the legacy responder; deterministic-v2 uses tool-based conversation state.")
 
     args = parser.parse_args(argv)
     if args.command == "chat":
