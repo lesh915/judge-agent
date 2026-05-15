@@ -110,6 +110,118 @@ LLM은 drift 자체를 임의로 판단하지 않는다. LLM은 다음 역할을
 이렇게 하면 기존 CI 안정성을 유지하면서 점진적으로 일반 agent 구조를 도입할 수 있다.
 
 ---
+## 3.4 Drift Metrics 측정 항목 반영
+
+대화형 Judge Agent 개발 시 측정해야 할 drift metric은 `docs/DRIFT_METRICS.xlsx`를 기준으로 한다. 이 엑셀 파일은 다음 시트를 포함한다.
+
+- `전체 Metric 목록`: LangChain/LangGraph agent drift 측정 후보 전체
+- `MVP 우선순위`: 우선 구현할 공통 MVP metric 7개
+- `Ref Agent 우선순위`: `reference_agent/weblog_agent` fixture에 이미 대응되는 metric 8개
+- `Severity 분류`: metric별 severity 기준
+
+### 3.4.1 MVP 우선 구현 Metric 7개
+
+일반 대화형 에이전트 개발 시 우선적으로 측정/노출해야 할 metric이다.
+
+| 우선순위 | Metric | Category | 측정 방법 | Severity | 개발 반영 방식 |
+|---:|---|---|---|---|---|
+| 1 | `tool_argument_correctness` | Tool Use | rule(schema + context) | High | tool call arguments가 user input/state/evidence에서 온 값인지 검증 |
+| 2 | `tool_error_handling_score` | Tool Use | rule | Critical | tool error 이후 retry/stop/report 여부를 대화 loop에서 검증 |
+| 3 | `answer_context_groundedness` | Context / Retrieval | LLM judge | High | 최종 답변의 claim이 retrieved context/evidence에 grounded 되었는지 평가 |
+| 4 | `node_sequence_correctness` | LangGraph Flow | rule(expected path) | Critical | graph mode에서 필수 node 순서와 validation path 실행 여부 검증 |
+| 5 | `verification_coverage` | Final Output / Completion | rule | High | 완료 전 필요한 검증(read/diff/test/tool result 확인 등) 수행 여부 측정 |
+| 6 | `instruction_adherence_score` | Prompt / Instruction | LLM judge + rule | High | system/tool/output policy 준수 여부 평가 |
+| 7 | `redundant_tool_call_count` | Tool Use | rule(중복 탐지) | Medium | 동일 목적 tool 반복 호출 횟수 측정 |
+
+### 3.4.2 Reference Agent 우선 Metric 8개
+
+현재 `simple` 구현은 reference weblog agent trace를 우선 분석하므로, 아래 metric은 기존 detector와 호환되도록 계속 유지하고 대화형 agent tool에서도 조회 가능해야 한다.
+
+| 우선순위 | Metric | 개발 반영 방식 |
+|---:|---|---|
+| 1 | `output_contract_compliance` | final output markdown section/output contract 준수 여부 |
+| 2 | `target_endpoint_consistency` | 사용자 요청의 target path와 tool argument/metric path 일치 여부 |
+| 3 | `metric_result_consistency` | metric claim이 실제 `compute_log_metrics` 결과에서 왔는지 여부 |
+| 4 | `validation_path_coverage` | `validate_findings` node와 `validation_result` event 실행 여부 |
+| 5 | `parse_error_handling_score` | 높은 parse error ratio 처리/차단/limitation 반영 여부 |
+| 6 | `rag_context_presence_and_usage` | RAG retrieval 및 final report 반영 여부 |
+| 7 | `mcp_context_presence_and_usage` | MCP service context 수집 및 report 반영 여부 |
+| 8 | `chat_context_grounding` | 후속 대화가 직전 analysis/focus/evidence에 grounded 되었는지 여부 |
+
+### 3.4.3 전체 Metric Registry
+
+대화형 agent는 모든 metric을 hard-coded 문자열로 흩어놓지 않고 registry로 관리해야 한다. 최소 registry schema는 다음과 같다.
+
+```python
+class DriftMetricSpec(TypedDict):
+    name: str
+    category: str
+    measurement_method: str
+    value_type: str
+    description: str
+    severity: str
+    mvp_priority: int | None
+    ref_agent_priority: int | None
+```
+
+초기 registry에는 `docs/DRIFT_METRICS.xlsx`의 `전체 Metric 목록`을 반영한다.
+
+| Category | Metrics |
+|---|---|
+| Prompt / Instruction | `instruction_adherence_score`, `output_format_compliance`, `prompt_template_version_present` |
+| Tool Use | `tool_selection_accuracy`, `tool_argument_correctness`, `tool_error_handling_score`, `redundant_tool_call_count`, `tool_result_grounding_score` |
+| Context / Retrieval | `retrieval_context_relevance`, `retrieval_context_precision`, `answer_context_groundedness`, `missing_required_context` |
+| Memory / State | `memory_claim_supported`, `state_freshness_score`, `state_value_grounding`, `memory_update_correctness` |
+| LangGraph Flow | `node_sequence_correctness`, `edge_decision_correctness`, `node_loop_count`, `graph_completion_path_valid`, `required_checkpoint_present` |
+| Final Output / Completion | `task_completion_score`, `verification_coverage`, `final_answer_consistency`, `hallucinated_completion_claim` |
+| ReAct / RAG / MCP | `react_step_completeness`, `action_grounding_score`, `observation_utilization_score` |
+
+### 3.4.4 Severity 반영 기준
+
+`docs/DRIFT_METRICS.xlsx`의 `Severity 분류`를 개발 기준으로 사용한다.
+
+| Severity | 대표 조건 | 개발상 처리 |
+|---|---|---|
+| Critical | 승인 없는 외부/파괴적 action, 민감정보 노출, validation skip, hallucinated completion claim | CI block, 대화 응답에서 최우선 경고 |
+| High | tool failure 성공 보고, hallucinated tool argument, context와 반대되는 답변 | warning/block 후보, 수정 우선순위 상위 |
+| Medium | 일부 요구사항 누락, 중복 tool/node loop, 낮은 groundedness, state update 누락 | review 필요, 개선 권고 |
+| Low | 경미한 format 위반, 영향 낮은 observability gap | 참고 정보로 노출 |
+
+### 3.4.5 대화형 Agent에서 Metric을 사용하는 방식
+
+대화형 agent는 metric을 단순 report 항목으로만 쓰지 않고, 다음 기능에 직접 사용해야 한다.
+
+1. **Planning**: 사용자 질문이 “왜 실패했나?”이면 `gate`, `severity`, MVP priority 기준으로 먼저 조회한다.
+2. **Tool Selection**: `metric_name`과 category를 기준으로 `get_finding`, `get_evidence`, `compare_runs`, `recommend_fix` tool을 선택한다.
+3. **Answer Grounding**: 답변은 finding evidence, metric spec, severity 기준을 함께 인용한다.
+4. **Follow-up Focus**: 사용자가 “그 근거는?”이라고 물으면 직전 metric/finding focus를 유지한다.
+5. **CI Gate**: Critical/High metric은 `--fail-on` threshold와 연결한다.
+6. **Regression Tracking**: 동일 metric의 score/finding count를 run 간 비교한다.
+
+### 3.4.6 개발 산출물
+
+Metric 반영을 위해 다음 파일을 추가/수정한다.
+
+```text
+judge_agent_simple/
+  metrics.py             # DriftMetricSpec registry
+  tools.py               # metric-aware analysis tools
+  conversation_state.py  # focused_metric / metric_history 저장
+  conversation_agent.py  # metric 기반 planning/follow-up
+  reporter.py            # metric registry metadata 포함
+  tests/
+    test_metrics.py
+    test_conversation_metrics.py
+```
+
+완료 기준:
+
+- `docs/DRIFT_METRICS.xlsx`의 MVP 7개와 Ref Agent 8개가 registry에 존재해야 한다.
+- 기존 detector finding의 `metric` 값이 registry에 매핑되어야 한다.
+- chat에서 “어떤 metric 때문에 block이야?”, “MVP 우선순위 기준으로 먼저 고칠 것 알려줘”, “tool_argument_correctness 근거 보여줘” 같은 질문에 답해야 한다.
+- report에는 metric category, severity, priority가 포함되어야 한다.
+
+---
 
 ## 4. 제안 아키텍처
 
@@ -206,10 +318,11 @@ python3 -m simple.judge_agent_simple.cli chat \
 
 작업:
 
+- `metrics.py` 추가: `docs/DRIFT_METRICS.xlsx` 기반 `DriftMetricSpec` registry 정의
 - `tools.py` 추가
 - 각 tool 입출력 schema 정의
 - session state를 받아 동작하는 pure function 형태로 구현
-- tool result에 `evidence`, `source`, `confidence` 포함
+- tool result에 `metric`, `severity`, `priority`, `evidence`, `source`, `confidence` 포함
 
 필수 tools:
 
@@ -224,6 +337,8 @@ python3 -m simple.judge_agent_simple.cli chat \
 완료 기준:
 
 - 각 tool 단위 테스트 작성
+- MVP 7개 metric과 Ref Agent 8개 metric이 registry에 존재
+- 기존 detector finding의 metric 값이 registry와 매핑
 - 기존 chat 응답을 tool 기반으로 재구성 가능
 
 ## Phase 2. Conversation State / Session 확장
@@ -237,6 +352,7 @@ python3 -m simple.judge_agent_simple.cli chat \
 - `conversation_state.py` 추가
 - 기존 `JudgeSessionState`와 호환되도록 migration 함수 제공
 - messages, tool_calls, evidence, focus, loaded_traces 저장
+- focused_metric, metric_history, severity_filter 저장
 - session json versioning 추가
 
 완료 기준:
@@ -261,6 +377,7 @@ python3 -m simple.judge_agent_simple.cli chat \
   - fix → `recommend_fix`
   - compare → `compare_runs`
 - follow-up focus resolution 구현
+- metric priority/severity 기반 finding 정렬 구현
 
 완료 기준:
 
@@ -427,6 +544,7 @@ START
 - prompt/tool policy
 - mock LLM tests
 - `chat --mode hybrid`
+- metric registry metadata를 LLM response context에 주입
 
 ### PR 4: Optional LangGraph Mode
 
