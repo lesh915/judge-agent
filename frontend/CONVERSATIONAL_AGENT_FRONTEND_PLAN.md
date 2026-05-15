@@ -4,7 +4,7 @@
 
 `simple/judge_agent_simple`의 대화형 Judge Agent와 `reference_agent/weblog_agent` reference target agent를 하나의 웹 UI에서 다룬다. 사용자는 Reference Agent를 실행해 trace/report를 생성하거나 기존 trace를 업로드/선택하고, Judge Agent로 분석한 뒤 채팅으로 drift 원인, 근거, 수정 우선순위, run 비교를 질의할 수 있어야 한다.
 
-디자인 기준은 `frontend/DESIGN.md`를 따른다. 실제 Agent ↔ Frontend 연동을 위한 상세 API 계약과 구현 순서는 `frontend/API_INTEGRATION_PLAN.md`를 따른다.
+디자인 기준은 `frontend/DESIGN.md`를 따른다. 실제 Agent ↔ Frontend 연동을 위한 상세 API 계약과 구현 순서는 `frontend/API_INTEGRATION_PLAN.md`, endpoint별 request/response는 `frontend/API_REFERENCE.md`를 따른다.
 
 핵심 방향:
 

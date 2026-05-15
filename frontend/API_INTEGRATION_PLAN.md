@@ -8,7 +8,7 @@
 2. **Judge Agent analysis runtime** — `simple/judge_agent_simple` 분석, finding/gate/score 생성
 3. **Conversational Judge runtime** — 분석 결과를 session에 올리고 follow-up 질문 처리
 
-이 문서는 프론트와 에이전트가 서로 안정적으로 연동되도록 API boundary, DTO, 상태 저장, 단계별 구현 계획을 정의한다.
+이 문서는 프론트와 에이전트가 서로 안정적으로 연동되도록 API boundary, DTO, 상태 저장, 단계별 구현 계획을 정의한다. Endpoint별 request/response 세부 형식은 `frontend/API_REFERENCE.md`를 기준으로 한다.
 
 ## 2. 핵심 원칙
 
