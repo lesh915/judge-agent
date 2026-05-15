@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import socket
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -103,7 +104,7 @@ class OpenAICompatibleChatClient:
         try:
             with urllib.request.urlopen(req, timeout=self.timeout_seconds) as resp:
                 raw = json.loads(resp.read().decode("utf-8"))
-        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+        except (urllib.error.URLError, TimeoutError, socket.timeout, json.JSONDecodeError) as exc:
             return LlmResult(content="", model=self.model, provider=self.provider, used_fallback=True, raw={"error": str(exc), "url": self.base_url})
         content = raw.get("choices", [{}])[0].get("message", {}).get("content") or ""
         return LlmResult(content=content, model=self.model, provider=self.provider, raw=raw)
