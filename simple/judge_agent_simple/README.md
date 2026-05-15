@@ -66,10 +66,11 @@ judge-agent-simple analyze-batch --traces "artifacts/weblog-reference/*.jsonl"
 
 The `chat` command starts an agent session over the detected findings. It keeps session state, classifies follow-up questions, selects relevant findings, and answers with evidence/recommendations instead of only printing a static report.
 
-Two modes are available:
+Three modes are available:
 
 - `--mode deterministic` — legacy keyword-based conversational layer over analyzed findings.
 - `--mode deterministic-v2` — tool-based conversational runtime. It uses a metric registry from `docs/DRIFT_METRICS.xlsx`, records tool calls/evidence in conversation state, preserves focused metric/finding context, and can answer follow-up questions such as “그 근거는?” or “수정 우선순위는?”.
+- `--mode hybrid` — deterministic tools + optional LLM response synthesis. The LLM does not decide drift by itself; it only rewrites/explains grounded tool results. If no provider is configured, it falls back to deterministic-v2 output.
 
 macOS/Linux:
 
@@ -87,6 +88,26 @@ py -m simple.judge_agent_simple.cli chat `
   --mode deterministic-v2 `
   --traces "artifacts/weblog-reference/*.jsonl" `
   --session-id weblog-drift-review
+```
+
+Hybrid mode with OpenAI-compatible configuration:
+
+```bash
+OPENAI_API_KEY=... python3 -m simple.judge_agent_simple.cli chat \
+  --mode hybrid \
+  --llm-provider openai \
+  --llm-model gpt-4o-mini \
+  --traces 'artifacts/weblog-reference/*.jsonl' \
+  --session-id weblog-drift-review
+```
+
+For tests and local dry-runs without external calls:
+
+```bash
+python3 -m simple.judge_agent_simple.cli chat \
+  --mode hybrid \
+  --llm-provider mock \
+  --traces 'artifacts/weblog-reference/*.jsonl'
 ```
 
 Example questions:

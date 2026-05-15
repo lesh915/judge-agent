@@ -9,8 +9,9 @@ from typing import List
 
 from .analyzer import analyze_trace, analyze_traces
 from .chat_agent import JudgeChatAgent
-from .conversation_agent import ToolBasedConversationAgent
+from .conversation_agent import HybridConversationAgent, ToolBasedConversationAgent
 from .conversation_state import ConversationState, load_conversation_state, save_conversation_state
+from .llm import create_llm_client
 from .reporter import markdown_report, write_json, write_markdown
 from .session import JudgeSessionState, load_session, save_session
 
@@ -44,7 +45,7 @@ def expand_trace_args(values: List[str]) -> List[str]:
 
 
 def run_chat(args) -> int:
-    if args.mode == "deterministic-v2":
+    if args.mode in {"deterministic-v2", "hybrid"}:
         return run_conversation_chat(args)
 
     session_dir = args.session_dir
@@ -98,7 +99,10 @@ def run_conversation_chat(args) -> int:
     else:
         state = ConversationState(session_id=args.session_id)
 
-    agent = ToolBasedConversationAgent(state)
+    if args.mode == "hybrid":
+        agent = HybridConversationAgent(state, llm=create_llm_client(args.llm_provider, args.llm_model))
+    else:
+        agent = ToolBasedConversationAgent(state)
     if args.traces:
         traces = expand_trace_args(args.traces)
         agent.load_analysis(traces, adapter_name=args.adapter)
@@ -153,7 +157,9 @@ def main(argv=None) -> int:
     p_chat.add_argument("--session-id", default="default")
     p_chat.add_argument("--session-dir", type=Path, default=Path("artifacts/simple-judge/sessions"))
     p_chat.add_argument("--resume", action="store_true", help="Resume a saved judge chat session")
-    p_chat.add_argument("--mode", choices=["deterministic", "deterministic-v2"], default="deterministic", help="Chat runtime mode. deterministic keeps the legacy responder; deterministic-v2 uses tool-based conversation state.")
+    p_chat.add_argument("--mode", choices=["deterministic", "deterministic-v2", "hybrid"], default="deterministic", help="Chat runtime mode. deterministic keeps the legacy responder; deterministic-v2 uses tool-based conversation state; hybrid adds optional LLM synthesis.")
+    p_chat.add_argument("--llm-provider", default="auto", help="LLM provider for hybrid mode: auto, openai, mock, or none")
+    p_chat.add_argument("--llm-model", help="LLM model name for hybrid mode")
 
     args = parser.parse_args(argv)
     if args.command == "chat":

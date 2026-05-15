@@ -191,6 +191,23 @@ User Message
 - `conversation_agent.py`: tool-based planner/response runtime
 - CLI: `judge-agent-simple chat --mode deterministic-v2`
 
+## 3.11 Hybrid LLM Response Synthesis
+
+`judge_agent_simple.conversation_agent.HybridConversationAgent`는 deterministic planner/tool execution을 유지하면서 LLM을 **응답 합성 계층**으로만 사용한다.
+
+원칙:
+
+- LLM은 drift finding을 임의 생성하지 않는다.
+- tool result, metric registry, evidence, state summary만 prompt context로 받는다.
+- provider가 없거나 실패하면 deterministic-v2 응답으로 fallback한다.
+- `llm.py`는 stdlib 기반 provider abstraction을 제공하며, 현재 `openai`, `mock`, `none/auto fallback`을 지원한다.
+
+CLI:
+
+```bash
+judge-agent-simple chat --mode hybrid --llm-provider auto
+```
+
 ## 4. 데이터 흐름
 
 ## 4.1 분석 흐름
@@ -211,14 +228,16 @@ User Message
 ## 4.1.1 대화형 분석 흐름
 
 ```text
-1. chat --mode deterministic-v2 시작
+1. chat --mode deterministic-v2 또는 --mode hybrid 시작
 2. trace load -> AnalysisResult -> ConversationState
 3. 사용자 질문 입력
 4. planner가 필요한 tool 선택
 5. tool이 finding/evidence/metric metadata 조회
 6. focused_metric / finding focus 업데이트
-7. grounded response 생성
-8. *.conversation.json session 저장
+7. deterministic grounded response 생성
+8. hybrid mode이면 LLM response synthesis 시도
+9. LLM unavailable/error 시 deterministic response로 fallback
+10. *.conversation.json session 저장
 ```
 
 ## 4.2 CI 흐름

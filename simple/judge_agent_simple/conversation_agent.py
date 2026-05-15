@@ -3,7 +3,9 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional
 
 from .conversation_state import ConversationState
+from .llm import LlmClient, LlmResult, UnavailableLlmClient
 from .metrics import get_metric
+from .prompts import build_hybrid_messages, compact_state_summary
 from . import tools
 
 
@@ -208,3 +210,30 @@ class ToolBasedConversationAgent:
             if upper.startswith("JD-"):
                 return upper
         return None
+
+
+class HybridConversationAgent(ToolBasedConversationAgent):
+    """Hybrid runtime: deterministic tools + optional LLM response synthesis.
+
+    Planning and tool execution remain deterministic. The LLM only rewrites and
+    explains the grounded tool results. If no provider is configured, the agent
+    returns the deterministic answer with an explicit fallback note.
+    """
+
+    def __init__(self, state: ConversationState, llm: Optional[LlmClient] = None):
+        super().__init__(state)
+        self.llm = llm or UnavailableLlmClient()
+        self.last_llm_result: Optional[LlmResult] = None
+
+    def welcome(self) -> str:
+        base = super().welcome()
+        return base + "\n\nHybrid mode: deterministic tools로 근거를 수집하고, LLM이 설정된 경우 답변 표현만 합성합니다."
+
+    def _respond(self, user_input: str, plan: List[Dict[str, Any]], results: List[Dict[str, Any]]) -> str:
+        deterministic = super()._respond(user_input, plan, results)
+        messages = build_hybrid_messages(user_input, deterministic, results, compact_state_summary(self.state))
+        llm_result = self.llm.complete(messages, temperature=0.0)
+        self.last_llm_result = llm_result
+        if llm_result.used_fallback or not llm_result.content.strip():
+            return deterministic + "\n\n[hybrid fallback] LLM provider가 설정되지 않아 deterministic tool 결과로 답변했습니다."
+        return llm_result.content.strip()

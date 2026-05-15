@@ -397,6 +397,8 @@ python3 -m simple.judge_agent_simple.cli chat \
 
 ## Phase 4. LLM Provider Abstraction 추가
 
+상태: **1차 구현 완료** (`llm.py`, `prompts.py`, `hybrid` response synthesis)
+
 목표:
 
 - 일반적인 자연어 질문을 처리할 수 있도록 LLM planner/response generator를 선택적으로 추가한다.
@@ -422,6 +424,8 @@ class LlmClient(Protocol):
 - API key 있는 환경에서는 hybrid mode로 자연어 질문 처리
 
 ## Phase 5. Hybrid Agent Mode
+
+상태: **1차 구현 완료** (`chat --mode hybrid`, deterministic tools + LLM synthesis/fallback)
 
 목표:
 
@@ -549,13 +553,17 @@ START
 
 ### PR 3: Hybrid LLM Mode
 
+상태: **완료**
+
 포함:
 
 - `llm.py`
+- `prompts.py`
 - prompt/tool policy
 - mock LLM tests
 - `chat --mode hybrid`
 - metric registry metadata를 LLM response context에 주입
+- LLM unavailable fallback
 
 ### PR 4: Optional LangGraph Mode
 
