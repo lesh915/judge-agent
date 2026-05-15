@@ -2,7 +2,7 @@
 
 ## 1. 목적
 
-`simple/judge_agent_simple`의 대화형 Judge Agent를 웹 UI로 제공한다. 사용자는 trace를 업로드하거나 기존 trace 경로를 선택하고, 분석 결과를 확인한 뒤 채팅으로 drift 원인, 근거, 수정 우선순위, run 비교를 질의할 수 있어야 한다.
+`simple/judge_agent_simple`의 대화형 Judge Agent와 `reference_agent/weblog_agent` reference target agent를 하나의 웹 UI에서 다룬다. 사용자는 Reference Agent를 실행해 trace/report를 생성하거나 기존 trace를 업로드/선택하고, Judge Agent로 분석한 뒤 채팅으로 drift 원인, 근거, 수정 우선순위, run 비교를 질의할 수 있어야 한다.
 
 디자인 기준은 `frontend/DESIGN.md`를 따른다.
 
@@ -13,7 +13,8 @@
 - shadow 없는 정보 밀도 높은 화면
 - code/evidence 영역만 dark olive-charcoal surface 사용
 - metric/finding/status는 pill chip, badge, callout banner로 표현
-- 대화형 에이전트이지만 “챗봇 앱”보다 “drift review workspace”처럼 보이게 설계
+- 대화형 에이전트이지만 “챗봇 앱”보다 “reference run → trace → judge review”가 이어지는 drift review workspace처럼 설계
+- Reference Agent의 ReAct loop, Tool/RAG/MCP/Validation trace를 Judge Agent 분석과 나란히 볼 수 있게 설계
 
 ## 2. 추천 기술 스택
 
@@ -50,6 +51,8 @@ frontend/
         AppShell.tsx
         PrimaryNav.tsx
         Sidebar.tsx
+        ReferenceAgentPanel.tsx
+        ReferenceRunTimeline.tsx
         ChatPanel.tsx
         FindingsPanel.tsx
         MetricCard.tsx
@@ -71,6 +74,10 @@ simple/judge_agent_simple/api.py
   FastAPI app
   /api/health
   /api/config
+  /api/reference/fixtures
+  /api/reference/runs
+  /api/reference/runs/{run_id}
+  /api/reference/runs/{run_id}/trace
   /api/analyze
   /api/sessions
   /api/sessions/{session_id}
@@ -106,6 +113,23 @@ simple/judge_agent_simple/api.py
 1. 사용자가 `Compare runs` tab을 선택한다.
 2. block/warning/pass, score, finding count 기준으로 정렬된 table을 보여준다.
 3. run row 클릭 시 해당 run의 top findings를 보여준다.
+
+### 4.5 Reference Agent 실행 및 Judge 분석
+
+1. 사용자가 Reference Agent 화면에서 fixture를 선택한다. 예: `normal-login-error-spike`, validation skipped drift, metric hallucination drift.
+2. LLM 사용 여부를 선택한다. 기본은 CI 재현성을 위해 `--no-llm` deterministic fallback이다.
+3. `Run reference agent` 버튼을 누르면 backend가 `reference_agent.weblog_agent.cli`와 동일한 runtime을 호출한다.
+4. UI는 생성된 report, JSONL trace, ReAct timeline, Tool/RAG/MCP/Validation 이벤트를 표시한다.
+5. 사용자가 `Judge this trace`를 누르면 해당 trace가 Judge Agent 분석으로 전달된다.
+6. Judge Agent 결과와 Reference Agent 실행 과정을 한 화면에서 연결해 본다.
+
+### 4.6 Reference Agent Interactive Chat Review
+
+1. 사용자가 reference chat session을 시작한다.
+2. 첫 질문으로 웹로그 분석 요청을 입력한다.
+3. Reference Agent가 child ReAct analysis trace와 chat trace를 생성한다.
+4. 이후 “방금 결과에서 가장 의심되는 원인은?” 같은 follow-up을 입력한다.
+5. Judge Agent는 reference chat trace의 `chat_context_built`, `chat_analysis_invoked`, `chat_response_generated` 이벤트를 분석해 chat grounding drift를 탐지한다.
 
 ## 5. 화면 설계
 
@@ -214,7 +238,29 @@ Actual: Validation path was missing or explicitly skipped.
 - JSON은 monospace, 13px 전후
 - 긴 evidence는 collapsed accordion
 
-## 5.6 Config / Model Settings
+## 5.6 Reference Agent Lab
+
+Reference Agent는 Judge Agent의 분석 대상이므로 별도 lab 화면을 둔다.
+
+주요 영역:
+
+- fixture selector: 정상/드리프트 scenario 선택
+- run options: `no_llm`, LLM provider/model, access log path, session id
+- run status: queued/running/succeeded/failed
+- generated artifacts: trace JSONL, markdown report, session JSON
+- ReAct timeline: Thought/Action/Observation step list
+- context panels: RAG runbook, MCP service context, validation result
+- CTA: `Judge this trace`
+
+디자인:
+
+- 전체는 `doc-card` 기반 technical workspace
+- ReAct timeline은 hairline row divider만 사용
+- raw trace excerpt는 `code-block` dark surface 사용
+- Tool/RAG/MCP/Validation 이벤트는 `badge-uppercase` + inline-code chip으로 표현
+- 정상 fixture와 drift fixture를 색으로 과하게 나누지 않고 pill label과 copy로 구분
+
+## 5.7 Config / Model Settings
 
 파일 기반 config를 보여주고 편집 가능성은 Phase 2로 미룬다.
 
@@ -275,7 +321,12 @@ CLI만으로는 프론트와 연동하기 어렵기 때문에 FastAPI backend를
 | --- | --- | --- |
 | GET | `/api/health` | backend 상태 확인 |
 | GET | `/api/config` | app/config/llm profile/metric count 조회 |
-| POST | `/api/analyze` | trace path 또는 uploaded trace 분석 |
+| GET | `/api/reference/fixtures` | Reference Agent fixture/scenario 목록 |
+| POST | `/api/reference/runs` | Reference Agent run 또는 chat turn 실행 |
+| GET | `/api/reference/runs` | Reference Agent run 목록 |
+| GET | `/api/reference/runs/{id}` | Reference Agent run metadata/report 조회 |
+| GET | `/api/reference/runs/{id}/trace` | 생성된 JSONL trace 조회 |
+| POST | `/api/analyze` | trace path, uploaded trace, 또는 reference run trace 분석 |
 | POST | `/api/sessions` | conversation session 생성 |
 | GET | `/api/sessions` | session 목록 |
 | GET | `/api/sessions/{id}` | session state 조회 |
@@ -296,6 +347,16 @@ type AnalysisSummary = {
   gateCounts: Record<Gate, number>;
   severityCounts: Record<Severity, number>;
   topFindings: Finding[];
+};
+
+type ReferenceRun = {
+  id: string;
+  fixture?: string;
+  mode: 'fixture' | 'custom-analysis' | 'chat';
+  status: 'queued' | 'running' | 'succeeded' | 'failed';
+  tracePath?: string;
+  reportPath?: string;
+  eventCounts: Record<string, number>;
 };
 
 type ChatMessage = {
@@ -320,7 +381,8 @@ type ChatMessage = {
 - [ ] `DESIGN.md` token을 CSS variable 후보로 정리
 - [ ] 주요 화면 wireframe 확정
 - [ ] API DTO 초안 확정
-- [ ] CLI runtime과 API runtime 재사용 경계 정의
+- [ ] Judge Agent CLI runtime과 API runtime 재사용 경계 정의
+- [ ] Reference Agent run/chat runtime을 API에서 호출하는 경계 정의
 
 산출물:
 
@@ -339,7 +401,8 @@ type ChatMessage = {
 - [ ] design token CSS 적용
 - [ ] Dashboard page 구현
 - [ ] Chat workspace shell 구현
-- [ ] mock findings/session data 연결
+- [ ] Reference Agent Lab shell 구현
+- [ ] mock reference runs/findings/session data 연결
 - [ ] responsive 3-column → single-column collapse 구현
 
 검증:
@@ -356,6 +419,7 @@ type ChatMessage = {
 
 - [ ] `simple/judge_agent_simple/api.py` FastAPI 추가
 - [ ] `/api/health`, `/api/config`, `/api/metrics` 구현
+- [ ] `/api/reference/fixtures`, `/api/reference/runs` 구현
 - [ ] `/api/analyze` 구현
 - [ ] session create/get/message endpoint 구현
 - [ ] CORS/local dev 설정
@@ -367,7 +431,26 @@ type ChatMessage = {
 - [ ] curl/API smoke tests
 - [ ] frontend에서 실제 analyze 호출 성공
 
-## Phase 3 — Conversation Integration
+## Phase 3 — Reference Agent Integration
+
+목표: Reference Agent를 UI에서 실행하고 생성 trace를 Judge Agent 분석으로 넘긴다.
+
+작업:
+
+- [ ] fixture 목록 조회/선택 UI 연결
+- [ ] reference run 실행 API 연결
+- [ ] generated trace/report artifact 표시
+- [ ] ReAct timeline 렌더링
+- [ ] Tool/RAG/MCP/Validation event detail 표시
+- [ ] `Judge this trace` 버튼으로 analyze flow 연결
+
+검증:
+
+- [ ] `run-all --no-llm`에 해당하는 reference fixture 실행 가능
+- [ ] 생성 trace가 Judge Agent 분석으로 연결됨
+- [ ] validation skipped / metric hallucination drift fixture가 UI에서 식별됨
+
+## Phase 4 — Conversation Integration
 
 목표: 대화형 agent를 UI에서 실제로 사용한다.
 
@@ -386,7 +469,7 @@ type ChatMessage = {
 - [ ] “JD-001 근거” evidence 표시 확인
 - [ ] “run 비교” table 표시 확인
 
-## Phase 4 — Trace Upload & Session Persistence
+## Phase 5 — Trace Upload & Session Persistence
 
 목표: 실제 사용 가능한 review workflow 완성.
 
@@ -404,7 +487,7 @@ type ChatMessage = {
 - [ ] 업로드→분석→채팅 full flow
 - [ ] 브라우저 reload 후 session 복구
 
-## Phase 5 — Polish & Technical Seminar Demo
+## Phase 6 — Polish & Technical Seminar Demo
 
 목표: 세미나/데모용 완성도 확보.
 
@@ -428,6 +511,7 @@ type ChatMessage = {
 
 MVP에 포함:
 
+- Reference Agent fixture 실행 및 generated trace/report 확인
 - trace path/glob 입력
 - analyze 실행
 - summary/gate/severity/top findings 표시
@@ -443,7 +527,7 @@ MVP에서 제외:
 - DB persistence
 - config 웹 편집
 - full streaming response
-- LangGraph visualization
+- full LangGraph visualization beyond Reference Agent timeline
 - production deployment pipeline
 
 ## 10. 향후 DB 연동 고려
@@ -452,11 +536,12 @@ MVP에서 제외:
 
 DB화 우선순위:
 
-1. sessions / messages / tool calls / evidence
-2. metric specs
-3. detector rule sets / thresholds
-4. LLM provider profiles
-5. user/team/workspace settings
+1. reference agent runs / generated artifacts / trace event index
+2. sessions / messages / tool calls / evidence
+3. metric specs
+4. detector rule sets / thresholds
+5. LLM provider profiles
+6. user/team/workspace settings
 
 Frontend는 처음부터 API DTO를 통해서만 데이터를 받도록 하고, config JSON 파일을 직접 import하지 않는다. 이렇게 하면 JSON file-backed API에서 DB-backed API로 전환해도 UI 변경이 최소화된다.
 
@@ -464,7 +549,7 @@ Frontend는 처음부터 API DTO를 통해서만 데이터를 받도록 하고, 
 
 | Risk | 대응 |
 | --- | --- |
-| CLI 중심 runtime이라 request/response API 경계가 애매함 | FastAPI wrapper에서 session state를 명시적으로 관리 |
+| CLI 중심 runtime이라 request/response API 경계가 애매함 | FastAPI wrapper에서 Judge Agent session state와 Reference Agent run artifact를 명시적으로 관리 |
 | LLM response 시간이 길어질 수 있음 | Phase 1은 non-streaming, Phase 2 이후 SSE 추가 |
 | evidence JSON이 길어 UI가 복잡해짐 | accordion + dark code block + excerpt 우선 |
 | DESIGN.md token 일부 값이 미정 | CSS variable 초안 작성 후 실제 화면에서 보정 |
@@ -474,9 +559,9 @@ Frontend는 처음부터 API DTO를 통해서만 데이터를 받도록 하고, 
 
 1. `frontend/app` Vite React TypeScript skeleton 생성
 2. `tokens.css` / `global.css` 작성
-3. mock data로 Dashboard + Chat Workspace 구현
+3. mock data로 Dashboard + Reference Agent Lab + Chat Workspace 구현
 4. 동시에 `simple/judge_agent_simple/api.py` FastAPI skeleton 작성
-5. mock → real API 순서로 연결
+5. Reference Agent run API → Judge analyze API → chat API 순서로 연결
 
 추천 시작 명령:
 
