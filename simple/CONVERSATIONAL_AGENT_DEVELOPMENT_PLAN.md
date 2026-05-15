@@ -448,6 +448,8 @@ class LlmClient(Protocol):
 
 ## Phase 6. Optional LangGraph Runtime
 
+상태: **1차 구현 완료** (`graph.py`, `chat --mode graph`, LangGraph 미설치 fallback)
+
 목표:
 
 - LangGraph dependency가 설치된 경우 graph-based conversation workflow를 제공한다.
@@ -567,11 +569,15 @@ START
 
 ### PR 4: Optional LangGraph Mode
 
+상태: **완료**
+
 포함:
 
 - `graph.py`
+- `chat --mode graph`
+- `--require-langgraph`
 - optional dependency fallback
-- graph checkpoint tests
+- graph mode tests
 
 ---
 

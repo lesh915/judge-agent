@@ -66,11 +66,12 @@ judge-agent-simple analyze-batch --traces "artifacts/weblog-reference/*.jsonl"
 
 The `chat` command starts an agent session over the detected findings. It keeps session state, classifies follow-up questions, selects relevant findings, and answers with evidence/recommendations instead of only printing a static report.
 
-Three modes are available:
+Four modes are available:
 
 - `--mode deterministic` — legacy keyword-based conversational layer over analyzed findings.
 - `--mode deterministic-v2` — tool-based conversational runtime. It uses a metric registry from `docs/DRIFT_METRICS.xlsx`, records tool calls/evidence in conversation state, preserves focused metric/finding context, and can answer follow-up questions such as “그 근거는?” or “수정 우선순위는?”.
 - `--mode hybrid` — deterministic tools + optional LLM response synthesis. The LLM does not decide drift by itself; it only rewrites/explains grounded tool results. If no provider is configured, it falls back to deterministic-v2 output.
+- `--mode graph` — optional LangGraph StateGraph runtime. If LangGraph is not installed, it gracefully falls back to the hybrid runtime unless `--require-langgraph` is set.
 
 macOS/Linux:
 
@@ -107,6 +108,24 @@ For tests and local dry-runs without external calls:
 python3 -m simple.judge_agent_simple.cli chat \
   --mode hybrid \
   --llm-provider mock \
+  --traces 'artifacts/weblog-reference/*.jsonl'
+```
+
+Optional graph mode:
+
+```bash
+python3 -m simple.judge_agent_simple.cli chat \
+  --mode graph \
+  --llm-provider none \
+  --traces 'artifacts/weblog-reference/*.jsonl'
+```
+
+To require the actual LangGraph dependency instead of fallback:
+
+```bash
+python3 -m simple.judge_agent_simple.cli chat \
+  --mode graph \
+  --require-langgraph \
   --traces 'artifacts/weblog-reference/*.jsonl'
 ```
 

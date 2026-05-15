@@ -208,6 +208,29 @@ CLI:
 judge-agent-simple chat --mode hybrid --llm-provider auto
 ```
 
+## 3.12 Optional LangGraph Runtime
+
+`judge_agent_simple.graph.GraphConversationAgent`는 LangGraph가 설치된 경우 다음 StateGraph workflow로 turn을 실행한다.
+
+```text
+START
+  -> receive
+  -> plan
+  -> execute_tools
+  -> respond
+  -> save
+  -> END
+```
+
+LangGraph가 설치되지 않은 환경에서는 기본적으로 hybrid runtime으로 fallback한다. 실제 LangGraph runtime을 강제하려면 `--require-langgraph`를 사용한다.
+
+CLI:
+
+```bash
+judge-agent-simple chat --mode graph --llm-provider none
+judge-agent-simple chat --mode graph --require-langgraph
+```
+
 ## 4. 데이터 흐름
 
 ## 4.1 분석 흐름
@@ -228,7 +251,7 @@ judge-agent-simple chat --mode hybrid --llm-provider auto
 ## 4.1.1 대화형 분석 흐름
 
 ```text
-1. chat --mode deterministic-v2 또는 --mode hybrid 시작
+1. chat --mode deterministic-v2, --mode hybrid, 또는 --mode graph 시작
 2. trace load -> AnalysisResult -> ConversationState
 3. 사용자 질문 입력
 4. planner가 필요한 tool 선택
@@ -236,8 +259,9 @@ judge-agent-simple chat --mode hybrid --llm-provider auto
 6. focused_metric / finding focus 업데이트
 7. deterministic grounded response 생성
 8. hybrid mode이면 LLM response synthesis 시도
-9. LLM unavailable/error 시 deterministic response로 fallback
-10. *.conversation.json session 저장
+9. graph mode이면 LangGraph StateGraph로 위 단계를 실행하거나 fallback
+10. LLM unavailable/error 시 deterministic response로 fallback
+11. *.conversation.json session 저장
 ```
 
 ## 4.2 CI 흐름
