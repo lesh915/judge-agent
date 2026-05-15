@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Protocol
 
+from ..core.config import llm_profiles_config
+
 
 @dataclass
 class LlmConfig:
@@ -170,8 +172,17 @@ def _env_float(name: str, default: float) -> float:
         return default
 
 
+def _provider_profile(provider: str) -> Dict[str, Any]:
+    profiles = llm_profiles_config()
+    providers = profiles.get("providers", {})
+    if provider in {"compatible", "local"}:
+        provider = "openai-compatible"
+    return providers.get(provider, {})
+
+
 def load_llm_config(*, provider: str = "auto", model: Optional[str] = None, env_file: Optional[str] = None, base_url: Optional[str] = None, api_key: Optional[str] = None) -> LlmConfig:
     loaded = load_env_file(env_file)
+    profiles = llm_profiles_config()
     selected_provider = (provider if provider != "auto" else _env("JUDGE_LLM_PROVIDER", _env("LLM_PROVIDER", "auto"))) or "auto"
     selected_provider = selected_provider.lower()
 
@@ -181,28 +192,24 @@ def load_llm_config(*, provider: str = "auto", model: Optional[str] = None, env_
 
     # OpenAI-compatible aliases and provider-specific fallbacks.
     if selected_provider in {"auto", "openai"}:
-        selected_model = selected_model or _env("OPENAI_MODEL", "gpt-4o-mini")
+        selected_model = selected_model or _env("OPENAI_MODEL", _provider_profile("openai").get("default_model", profiles.get("default_model", "gpt-4o-mini")))
         selected_api_key = selected_api_key or _env("OPENAI_API_KEY")
-        selected_base_url = selected_base_url or _env("OPENAI_BASE_URL", "https://api.openai.com/v1")
+        selected_base_url = selected_base_url or _env("OPENAI_BASE_URL", _provider_profile("openai").get("base_url", "https://api.openai.com/v1"))
     elif selected_provider in {"openai-compatible", "compatible", "local", "vllm", "lmstudio", "ollama", "localai", "llama-cpp"}:
-        selected_model = selected_model or "local-model"
+        profile = _provider_profile(selected_provider)
+        selected_model = selected_model or profile.get("default_model", "local-model")
         # Common local defaults. Users can override with JUDGE_LLM_BASE_URL.
         if not selected_base_url:
-            if selected_provider == "ollama":
-                selected_base_url = "http://localhost:11434/v1"
-            elif selected_provider == "lmstudio":
-                selected_base_url = "http://localhost:1234/v1"
-            else:
-                selected_base_url = "http://localhost:8000/v1"
+            selected_base_url = profile.get("base_url", "http://localhost:8000/v1")
         selected_api_key = selected_api_key or _env("OPENAI_API_KEY") or "local"
     elif selected_provider == "mock":
-        selected_model = selected_model or "mock-llm"
+        selected_model = selected_model or _provider_profile("mock").get("default_model", "mock-llm")
     else:
-        selected_model = selected_model or "deterministic-fallback"
+        selected_model = selected_model or _provider_profile("none").get("default_model", "deterministic-fallback")
 
     return LlmConfig(
         provider=selected_provider,
-        model=selected_model or "gpt-4o-mini",
+        model=selected_model or profiles.get("default_model", "gpt-4o-mini"),
         api_key=selected_api_key,
         base_url=selected_base_url,
         timeout_seconds=_env_float("JUDGE_LLM_TIMEOUT_SECONDS", _env_float("LLM_TIMEOUT_SECONDS", 30.0)),

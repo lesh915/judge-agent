@@ -162,7 +162,7 @@ LLM judge는 rubric 기반으로 품질을 평가한다.
 
 ## 3.9 Metric Registry
 
-`judge_agent_simple.metrics`는 `docs/DRIFT_METRICS.xlsx`를 코드에 반영한 metric registry다.
+`judge_agent_simple.core.metrics`는 `simple/config/metrics.json`을 읽는 metric registry다. 원천 데이터는 `docs/DRIFT_METRICS.xlsx`에서 시작했지만, 런타임 값은 코드가 아니라 config 파일로 관리한다.
 
 역할:
 
@@ -173,7 +173,7 @@ LLM judge는 rubric 기반으로 품질을 평가한다.
 
 ## 3.10 Tool-based Conversation Runtime
 
-`judge_agent_simple.conversation_agent.ToolBasedConversationAgent`는 LLM 없이 동작하는 첫 번째 일반 대화형 runtime이다.
+`judge_agent_simple.conversation.agent.ToolBasedConversationAgent`는 LLM 없이 동작하는 첫 번째 일반 대화형 runtime이다.
 
 ```text
 User Message
@@ -193,7 +193,7 @@ User Message
 
 ## 3.11 Hybrid LLM Response Synthesis
 
-`judge_agent_simple.conversation_agent.HybridConversationAgent`는 deterministic planner/tool execution을 유지하면서 LLM을 **응답 합성 계층**으로만 사용한다.
+`judge_agent_simple.conversation.agent.HybridConversationAgent`는 deterministic planner/tool execution을 유지하면서 LLM을 **응답 합성 계층**으로만 사용한다.
 
 원칙:
 
@@ -211,9 +211,22 @@ CLI:
 judge-agent-simple chat --mode hybrid --llm-provider auto
 ```
 
-## 3.12 Optional LangGraph Runtime
+## 3.12 File-based Configuration
 
-`judge_agent_simple.graph.GraphConversationAgent`는 LangGraph가 설치된 경우 다음 StateGraph workflow로 turn을 실행한다.
+런타임에서 자주 바뀌는 값은 `simple/config/`의 파일 기반 설정으로 분리했다.
+
+- `app.json`: CLI 기본값, 지원 mode/provider 목록
+- `metrics.json`: drift metric registry
+- `detector_rules.json`: detector threshold, required output sections, scoring/gate rule, tool aliases, root-cause templates
+- `conversation.json`: severity rank, intent keyword, fallback message
+- `llm_profiles.json`: provider별 기본 URL과 모델 profile (`gpt-4o-mini` 포함)
+- `database_tables.md`: DB 전환 시 테이블 후보
+
+기본 경로는 `simple/config`이며, 배포 환경별 override는 `JUDGE_CONFIG_DIR=/path/to/config`로 지정한다. 이 구조는 현재 JSON 파일을 읽지만, loader 뒤쪽을 DB repository로 교체하기 쉽게 만든다.
+
+## 3.13 Optional LangGraph Runtime
+
+`judge_agent_simple.conversation.graph.GraphConversationAgent`는 LangGraph가 설치된 경우 다음 StateGraph workflow로 turn을 실행한다.
 
 ```text
 START

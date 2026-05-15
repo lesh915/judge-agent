@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import List
 
 from .analysis.analyzer import analyze_trace, analyze_traces
+from .core.config import app_config, conversation_config
 from .conversation.legacy import JudgeChatAgent
 from .conversation.agent import HybridConversationAgent, ToolBasedConversationAgent
 from .conversation.state import ConversationState, load_conversation_state, save_conversation_state
@@ -15,6 +16,11 @@ from .conversation.graph import GraphConversationAgent
 from .llm.clients import create_llm_client
 from .analysis.reporter import markdown_report, write_json, write_markdown
 from .core.session import JudgeSessionState, load_session, save_session
+
+APP_SETTINGS = app_config()
+APP_DEFAULTS = APP_SETTINGS["defaults"]
+APP_SUPPORTED = APP_SETTINGS["supported"]
+CONVERSATION_SETTINGS = conversation_config()
 
 
 def _configure_output_encoding() -> None:
@@ -142,26 +148,26 @@ def main(argv=None) -> int:
 
     p_analyze = sub.add_parser("analyze", help="Analyze one trace")
     p_analyze.add_argument("--trace", required=True)
-    p_analyze.add_argument("--adapter", default="reference-weblog-jsonl")
+    p_analyze.add_argument("--adapter", default=APP_DEFAULTS["adapter"])
     p_analyze.add_argument("--output", type=Path)
     p_analyze.add_argument("--json", type=Path)
-    p_analyze.add_argument("--fail-on", choices=["low", "medium", "high", "critical"], default="critical")
+    p_analyze.add_argument("--fail-on", choices=APP_SUPPORTED["fail_on"], default=APP_DEFAULTS["fail_on"])
 
     p_batch = sub.add_parser("analyze-batch", help="Analyze multiple traces")
     p_batch.add_argument("--traces", nargs="+", required=True)
-    p_batch.add_argument("--adapter", default="reference-weblog-jsonl")
+    p_batch.add_argument("--adapter", default=APP_DEFAULTS["adapter"])
     p_batch.add_argument("--output", type=Path)
     p_batch.add_argument("--json", type=Path)
-    p_batch.add_argument("--fail-on", choices=["low", "medium", "high", "critical"], default="critical")
+    p_batch.add_argument("--fail-on", choices=APP_SUPPORTED["fail_on"], default=APP_DEFAULTS["fail_on"])
 
     p_chat = sub.add_parser("chat", help="Start a conversational judge agent over analyzed traces")
     p_chat.add_argument("--traces", nargs="+", help="Trace JSONL files or glob patterns to analyze before chat starts")
-    p_chat.add_argument("--adapter", default="reference-weblog-jsonl")
-    p_chat.add_argument("--session-id", default="default")
-    p_chat.add_argument("--session-dir", type=Path, default=Path("artifacts/simple-judge/sessions"))
+    p_chat.add_argument("--adapter", default=APP_DEFAULTS["adapter"])
+    p_chat.add_argument("--session-id", default=APP_DEFAULTS["session_id"])
+    p_chat.add_argument("--session-dir", type=Path, default=Path(APP_DEFAULTS["session_dir"]))
     p_chat.add_argument("--resume", action="store_true", help="Resume a saved judge chat session")
-    p_chat.add_argument("--mode", choices=["deterministic", "deterministic-v2", "hybrid", "graph"], default="deterministic", help="Chat runtime mode. deterministic keeps the legacy responder; deterministic-v2 uses tool-based conversation state; hybrid adds optional LLM synthesis; graph uses optional LangGraph runtime with fallback.")
-    p_chat.add_argument("--llm-provider", default="auto", help="LLM provider for hybrid/graph mode: auto, openai, openai-compatible, local, vllm, lmstudio, ollama, mock, or none")
+    p_chat.add_argument("--mode", choices=APP_SUPPORTED["chat_modes"], default=APP_DEFAULTS["chat_mode"], help="Chat runtime mode. deterministic keeps the legacy responder; deterministic-v2 uses tool-based conversation state; hybrid adds optional LLM synthesis; graph uses optional LangGraph runtime with fallback.")
+    p_chat.add_argument("--llm-provider", default=APP_DEFAULTS["llm_provider"], choices=APP_SUPPORTED["llm_providers"], help="LLM provider for hybrid/graph mode")
     p_chat.add_argument("--llm-model", help="LLM model name for hybrid/graph mode")
     p_chat.add_argument("--llm-base-url", help="OpenAI-compatible base URL, e.g. http://localhost:1234/v1")
     p_chat.add_argument("--llm-api-key", help="LLM API key. For local compatible servers this can be any non-empty value if auth is disabled.")
@@ -184,7 +190,7 @@ def main(argv=None) -> int:
     if not args.output and not args.json:
         print(markdown_report(results))
 
-    severity_order = {"low": 1, "medium": 2, "high": 3, "critical": 4}
+    severity_order = CONVERSATION_SETTINGS["severity_rank"]
     threshold = severity_order[args.fail_on]
     should_fail = any(severity_order.get(f.severity, 0) >= threshold for r in results for f in r.findings)
     return 1 if should_fail else 0

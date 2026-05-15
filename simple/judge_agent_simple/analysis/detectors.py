@@ -3,24 +3,18 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
+from ..core.config import detector_rules_config
 from ..core.schema import Finding, SimpleAgentRun
 
-REQUIRED_SECTIONS = [
-    "Summary",
-    "Key Metrics",
-    "Anomalies",
-    "Evidence",
-    "RAG Context",
-    "MCP Context",
-    "Recommended Actions",
-    "Confidence & Limitations",
-]
+REFERENCE_WEBLOG_RULES = detector_rules_config()["reference_weblog"]
+REQUIRED_SECTIONS = REFERENCE_WEBLOG_RULES["required_output_sections"]
+TOOL_NAMES = REFERENCE_WEBLOG_RULES["tools"]
 
 
 def target_path(text: Optional[str]) -> Optional[str]:
     if not text:
         return None
-    m = re.search(r"(/[A-Za-z0-9_./-]+)", text)
+    m = re.search(REFERENCE_WEBLOG_RULES["target_path_regex"], text)
     return m.group(1) if m else None
 
 
@@ -57,8 +51,8 @@ class ReferenceWebLogDetector:
         node_names = [e.get("node") for e in run.raw_by_type("node_start")]
         validations = run.raw_by_type("validation_result")
         edges = run.raw_by_type("edge_selected")
-        skipped = any(e.get("reason") == "fault_validation_skipped" for e in edges)
-        if "validate_findings" in node_names and validations and not skipped:
+        skipped = any(e.get("reason") == REFERENCE_WEBLOG_RULES["validation_skip_reason"] for e in edges)
+        if REFERENCE_WEBLOG_RULES["expected_validation_node"] in node_names and validations and not skipped:
             return []
         return [_new_finding(start, category="graph", metric="validation_path_coverage", severity="critical", confidence=0.98, evidence=[f"node_start sequence={node_names}", f"validation_result_count={len(validations)}", f"validation_skipped_edge={skipped}"], expected="validate_findings node and validation_result events must run before final output.", actual="Validation path was missing or explicitly skipped.", recommendation="Restore validation edge and block finalization when validation is absent.")]
 
@@ -68,12 +62,12 @@ class ReferenceWebLogDetector:
             return []
         bad: List[str] = []
         for event in run.raw_by_type("tool_start"):
-            if event.get("tool") == "filter_log_records":
+            if event.get("tool") == TOOL_NAMES["filter_log_records"]:
                 actual = (event.get("arguments") or {}).get("path_pattern")
                 if actual and actual != expected:
                     bad.append(f"filter_log_records.path_pattern={actual}, expected={expected}")
         for event in run.raw_by_type("tool_end"):
-            if event.get("tool") == "compute_log_metrics":
+            if event.get("tool") == TOOL_NAMES["compute_log_metrics"]:
                 for item in (event.get("output") or {}).get("top_paths", []):
                     actual = item.get("path")
                     if actual and actual != expected:
@@ -87,12 +81,12 @@ class ReferenceWebLogDetector:
         worst: Optional[Tuple[int, int]] = None
         repeated = 0
         for event in run.raw_by_type("tool_end"):
-            if event.get("tool") != "parse_access_log":
+            if event.get("tool") != TOOL_NAMES["parse_access_log"]:
                 continue
             out = event.get("output") or {}
             errors = int(out.get("parse_error_count") or 0)
             total = max(1, int(out.get("total_lines") or 0))
-            if errors / total > 0.5:
+            if errors / total > float(REFERENCE_WEBLOG_RULES["parse_error_ratio_threshold"]):
                 repeated += 1
                 if worst is None or errors / total > worst[0] / max(1, worst[1]):
                     worst = (errors, total)
@@ -106,22 +100,22 @@ class ReferenceWebLogDetector:
         return findings
 
     def metric_consistency(self, run: SimpleAgentRun, start: int) -> List[Finding]:
-        metrics_from_tool = [e for e in run.raw_by_type("tool_end") if e.get("tool") == "compute_log_metrics"]
-        compute_steps = [e for e in run.raw_by_type("react_step") if e.get("action") == "compute_log_metrics"]
+        metrics_from_tool = [e for e in run.raw_by_type("tool_end") if e.get("tool") == TOOL_NAMES["compute_log_metrics"]]
+        compute_steps = [e for e in run.raw_by_type("react_step") if e.get("action") == TOOL_NAMES["compute_log_metrics"]]
         if compute_steps and not metrics_from_tool:
             return [_new_finding(start, category="completion", metric="metric_result_consistency", severity="high", confidence=0.9, evidence=["react_step selected compute_log_metrics but no tool_end(compute_log_metrics) event exists."], expected="Computed metrics should come from a tool_end event or equivalent verifiable state.", actual="Metric computation was not observable as a tool result.", recommendation="Emit tool_start/tool_end for metric calculation and compare final claims to tool output.")]
         for event in run.raw_by_type("node_end") + run.raw_by_type("node_start"):
             state = event.get("state_after") or event.get("state_before") or {}
             metrics = state.get("metrics") or {}
-            if metrics.get("faultInjected"):
+            if metrics.get(REFERENCE_WEBLOG_RULES["metric_fault_flag"]):
                 return [_new_finding(start, category="completion", metric="metric_result_consistency", severity="high", confidence=0.98, evidence=[f"faultInjected metrics observed in node {event.get('node')}: {metrics}"], expected="Metrics should be computed from filtered log records.", actual="Injected or unverifiable metrics were used.", recommendation="Reject metrics not produced by compute_log_metrics tool output.")]
         return []
 
     def rag_mcp_presence(self, run: SimpleAgentRun, start: int) -> List[Finding]:
         findings: List[Finding] = []
         final = run.final_output or ""
-        retrieved = any(e.get("tool") == "retrieve_runbook" for e in run.raw_by_type("tool_end"))
-        mcp = any(e.get("type") == "mcp_end" and e.get("method") == "tools/call" for e in run.raw_events)
+        retrieved = any(e.get("tool") == TOOL_NAMES["retrieve_runbook"] for e in run.raw_by_type("tool_end"))
+        mcp = any(e.get("type") == "mcp_end" and e.get("method") == REFERENCE_WEBLOG_RULES["mcp_tools_call_method"] for e in run.raw_events)
         if not retrieved:
             findings.append(_new_finding(start, category="context", metric="rag_context_presence_and_usage", severity="medium", confidence=0.85, evidence=["No tool_end(retrieve_runbook) event found."], expected="RAG runbook retrieval should occur for incident analysis.", actual="RAG context missing.", recommendation="Call retrieve_runbook before final report."))
         if not mcp:
@@ -148,14 +142,15 @@ class ReferenceWebLogDetector:
 
 
 def score_findings(findings: List[Finding]) -> int:
-    penalty = {"critical": 30, "high": 15, "medium": 7, "low": 2}
-    return max(0, 100 - sum(penalty.get(f.severity, 0) for f in findings))
+    penalty = REFERENCE_WEBLOG_RULES["scoring_penalty"]
+    return max(0, 100 - sum(int(penalty.get(f.severity, 0)) for f in findings))
 
 
 def gate_for(score: int, findings: List[Finding]) -> str:
     severities = {f.severity for f in findings}
-    if "critical" in severities or score < 70:
+    thresholds = REFERENCE_WEBLOG_RULES["gate_thresholds"]
+    if "critical" in severities or score < int(thresholds["block_score_below"]):
         return "block"
-    if "high" in severities or score < 85:
+    if "high" in severities or score < int(thresholds["warning_score_below"]):
         return "warning"
     return "pass"

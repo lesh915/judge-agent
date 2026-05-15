@@ -3,11 +3,15 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
+from ..core.config import conversation_config, detector_rules_config
 from ..core.schema import AnalysisResult
 from ..core.session import JudgeSessionState
 
-
-SEVERITY_RANK = {"critical": 4, "high": 3, "medium": 2, "low": 1}
+CONVERSATION_RULES = conversation_config()
+REFERENCE_WEBLOG_RULES = detector_rules_config()["reference_weblog"]
+SEVERITY_RANK = CONVERSATION_RULES["severity_rank"]
+INTENTS = CONVERSATION_RULES["intents"]
+ROOT_CAUSES = REFERENCE_WEBLOG_RULES["metric_root_causes"]
 
 
 class JudgeChatAgent:
@@ -49,15 +53,15 @@ class JudgeChatAgent:
 
     def _classify_intent(self, text: str) -> str:
         q = text.lower()
-        if any(token in q for token in ["block", "fail", "warning", "통과"]):
+        if any(token in q for token in INTENTS["gate"]):
             return "gate"
-        if any(token in q for token in ["근거", "evidence", "왜", "why"]):
+        if any(token in q for token in INTENTS["evidence"]):
             return "evidence"
-        if any(token in q for token in ["수정", "고쳐", "fix", "recommend", "조치", "우선"]):
+        if any(token in q for token in INTENTS["recommendation"]):
             return "recommendation"
-        if any(token in q for token in ["원인", "root", "cause", "분석"]):
+        if any(token in q for token in INTENTS.get("root_cause", ["원인", "root", "cause", "분석"])):
             return "root_cause"
-        if any(token in q for token in ["요약", "summary", "전체", "상태"]):
+        if any(token in q for token in INTENTS["summary"]):
             return "summary"
         return "drilldown"
 
@@ -158,13 +162,7 @@ class JudgeChatAgent:
 
     def _root_cause_response(self, run: Dict[str, Any], finding: Dict[str, Any]) -> str:
         metric = finding.get("metric")
-        cause = {
-            "validation_path_coverage": "graph transition이 validation 단계를 우회했거나 validation 결과를 gate 조건으로 강제하지 않은 구조 문제",
-            "target_endpoint_consistency": "사용자 요청에서 파싱한 targetPath가 tool argument 생성 단계에 안정적으로 고정되지 않은 문제",
-            "metric_result_consistency": "metric 산출이 검증 가능한 tool output이 아니라 내부 상태/환각 값으로 대체된 문제",
-            "output_contract_compliance": "prompt/output contract가 finalization 직전에 검증되지 않은 문제",
-            "parse_error_handling_score": "parse 실패율이 높은데도 분석을 계속 진행하고 confidence를 낮추거나 실패 처리하지 않은 문제",
-        }.get(metric, "trace상 기대 동작과 실제 agent 동작이 어긋난 drift")
+        cause = ROOT_CAUSES.get(metric, "trace상 기대 동작과 실제 agent 동작이 어긋난 drift")
         return "\n".join([
             f"가능성이 큰 원인은 {cause}입니다.",
             f"- finding: {finding.get('id')} `{metric}`",

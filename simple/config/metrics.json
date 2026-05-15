@@ -1,0 +1,366 @@
+{
+  "version": 1,
+  "source": "docs/DRIFT_METRICS.xlsx",
+  "metrics": [
+    {
+      "name": "output_contract_compliance",
+      "category": "Prompt / Instruction",
+      "measurement_method": "deterministic parser",
+      "value_type": "pass/fail",
+      "description": "final output이 markdown contract를 만족하는지.",
+      "severity": "High",
+      "mvp_priority": null,
+      "ref_agent_priority": 1
+    },
+    {
+      "name": "tool_argument_correctness",
+      "category": "Tool Use",
+      "measurement_method": "rule (schema + context)",
+      "value_type": "0.0 ~ 1.0",
+      "description": "tool argument가 schema와 context를 만족하는지.",
+      "severity": "High",
+      "mvp_priority": 1,
+      "ref_agent_priority": null
+    },
+    {
+      "name": "target_endpoint_consistency",
+      "category": "Tool Use",
+      "measurement_method": "rule (context)",
+      "value_type": "pass/fail",
+      "description": "사용자 요청 target endpoint와 tool/metric path가 일치하는지.",
+      "severity": "High",
+      "mvp_priority": null,
+      "ref_agent_priority": 2
+    },
+    {
+      "name": "tool_error_handling_score",
+      "category": "Tool Use",
+      "measurement_method": "rule",
+      "value_type": "0.0 ~ 1.0",
+      "description": "tool error를 적절히 처리했는지.",
+      "severity": "Critical",
+      "mvp_priority": 2,
+      "ref_agent_priority": null
+    },
+    {
+      "name": "answer_context_groundedness",
+      "category": "Context / Retrieval",
+      "measurement_method": "LLM judge",
+      "value_type": "0.0 ~ 1.0",
+      "description": "final output이 retrieved context에 근거하는지.",
+      "severity": "High",
+      "mvp_priority": 3,
+      "ref_agent_priority": null
+    },
+    {
+      "name": "metric_result_consistency",
+      "category": "Final Output / Completion",
+      "measurement_method": "rule (tool output)",
+      "value_type": "pass/fail",
+      "description": "metric claim이 검증 가능한 tool output에서 왔는지.",
+      "severity": "High",
+      "mvp_priority": null,
+      "ref_agent_priority": 3
+    },
+    {
+      "name": "node_sequence_correctness",
+      "category": "LangGraph Flow",
+      "measurement_method": "rule (expected path)",
+      "value_type": "0.0 ~ 1.0",
+      "description": "실행된 node 순서가 기대 workflow와 맞는지.",
+      "severity": "Critical",
+      "mvp_priority": 4,
+      "ref_agent_priority": null
+    },
+    {
+      "name": "validation_path_coverage",
+      "category": "LangGraph Flow",
+      "measurement_method": "rule (expected path)",
+      "value_type": "pass/fail",
+      "description": "validate_findings node와 validation_result가 실행되었는지.",
+      "severity": "Critical",
+      "mvp_priority": null,
+      "ref_agent_priority": 4
+    },
+    {
+      "name": "verification_coverage",
+      "category": "Final Output / Completion",
+      "measurement_method": "rule",
+      "value_type": "0.0 ~ 1.0",
+      "description": "완료 전 필요한 검증을 수행했는지.",
+      "severity": "High",
+      "mvp_priority": 5,
+      "ref_agent_priority": null
+    },
+    {
+      "name": "parse_error_handling_score",
+      "category": "Tool Use",
+      "measurement_method": "rule",
+      "value_type": "0.0 ~ 1.0",
+      "description": "높은 parse error ratio를 차단/반영했는지.",
+      "severity": "High",
+      "mvp_priority": null,
+      "ref_agent_priority": 5
+    },
+    {
+      "name": "rag_context_presence_and_usage",
+      "category": "Context / Retrieval",
+      "measurement_method": "rule",
+      "value_type": "pass/fail",
+      "description": "RAG retrieval과 final report 반영 여부.",
+      "severity": "Medium",
+      "mvp_priority": null,
+      "ref_agent_priority": 6
+    },
+    {
+      "name": "instruction_adherence_score",
+      "category": "Prompt / Instruction",
+      "measurement_method": "LLM judge + rule",
+      "value_type": "0.0 ~ 1.0",
+      "description": "Agent가 주어진 instruction을 따른 정도.",
+      "severity": "High",
+      "mvp_priority": 6,
+      "ref_agent_priority": null
+    },
+    {
+      "name": "mcp_context_presence_and_usage",
+      "category": "ReAct / RAG / MCP",
+      "measurement_method": "rule",
+      "value_type": "pass/fail",
+      "description": "MCP service context 수집과 final report 반영 여부.",
+      "severity": "Medium",
+      "mvp_priority": null,
+      "ref_agent_priority": 7
+    },
+    {
+      "name": "redundant_tool_call_count",
+      "category": "Tool Use",
+      "measurement_method": "rule (중복 탐지)",
+      "value_type": "count (정수)",
+      "description": "같은 목적의 중복 tool 호출 횟수.",
+      "severity": "Medium",
+      "mvp_priority": 7,
+      "ref_agent_priority": null
+    },
+    {
+      "name": "chat_context_grounding",
+      "category": "Context / Retrieval",
+      "measurement_method": "rule",
+      "value_type": "pass/fail",
+      "description": "후속 대화가 직전 analysis/focus/evidence에 grounded 되었는지.",
+      "severity": "Medium",
+      "mvp_priority": null,
+      "ref_agent_priority": 8
+    },
+    {
+      "name": "missing_required_context",
+      "category": "Context / Retrieval",
+      "measurement_method": "reference fixture / LLM judge",
+      "value_type": "0.0 ~ 1.0",
+      "description": "답변에 필요한 context가 검색되지 않았는지.",
+      "severity": "High",
+      "mvp_priority": null,
+      "ref_agent_priority": null
+    },
+    {
+      "name": "retrieval_context_precision",
+      "category": "Context / Retrieval",
+      "measurement_method": "rule (비율)",
+      "value_type": "0.0 ~ 1.0",
+      "description": "retrieved chunk 중 관련 있는 chunk의 비율.",
+      "severity": "Medium",
+      "mvp_priority": null,
+      "ref_agent_priority": null
+    },
+    {
+      "name": "retrieval_context_relevance",
+      "category": "Context / Retrieval",
+      "measurement_method": "LLM judge / embedding sim",
+      "value_type": "0.0 ~ 1.0",
+      "description": "retriever가 가져온 document/chunk가 user input과 관련 있는지.",
+      "severity": "Medium",
+      "mvp_priority": null,
+      "ref_agent_priority": null
+    },
+    {
+      "name": "final_answer_consistency",
+      "category": "Final Output / Completion",
+      "measurement_method": "LLM judge + rule",
+      "value_type": "0.0 ~ 1.0",
+      "description": "final answer가 trace의 실제 실행 결과와 일치하는지.",
+      "severity": "High",
+      "mvp_priority": null,
+      "ref_agent_priority": null
+    },
+    {
+      "name": "hallucinated_completion_claim",
+      "category": "Final Output / Completion",
+      "measurement_method": "LLM judge + rule",
+      "value_type": "pass/fail",
+      "description": "실제로 수행하지 않은 일을 완료했다고 말했는지.",
+      "severity": "Critical",
+      "mvp_priority": null,
+      "ref_agent_priority": null
+    },
+    {
+      "name": "task_completion_score",
+      "category": "Final Output / Completion",
+      "measurement_method": "LLM judge + rule",
+      "value_type": "0.0 ~ 1.0",
+      "description": "사용자 요청이 완료되었는지.",
+      "severity": "High",
+      "mvp_priority": null,
+      "ref_agent_priority": null
+    },
+    {
+      "name": "edge_decision_correctness",
+      "category": "LangGraph Flow",
+      "measurement_method": "rule (state 비교)",
+      "value_type": "0.0 ~ 1.0",
+      "description": "conditional edge 선택이 state/tool result와 맞는지.",
+      "severity": "High",
+      "mvp_priority": null,
+      "ref_agent_priority": null
+    },
+    {
+      "name": "graph_completion_path_valid",
+      "category": "LangGraph Flow",
+      "measurement_method": "rule (종료 path)",
+      "value_type": "pass/fail",
+      "description": "종료 node까지의 path가 정상 완료 path인지.",
+      "severity": "High",
+      "mvp_priority": null,
+      "ref_agent_priority": null
+    },
+    {
+      "name": "node_loop_count",
+      "category": "LangGraph Flow",
+      "measurement_method": "rule (반복 탐지)",
+      "value_type": "count (정수)",
+      "description": "같은 node 반복 횟수.",
+      "severity": "Medium",
+      "mvp_priority": null,
+      "ref_agent_priority": null
+    },
+    {
+      "name": "required_checkpoint_present",
+      "category": "LangGraph Flow",
+      "measurement_method": "rule (checkpoint 검사)",
+      "value_type": "pass/fail",
+      "description": "중요 node 이후 checkpoint/state snapshot이 존재하는지.",
+      "severity": "Medium",
+      "mvp_priority": null,
+      "ref_agent_priority": null
+    },
+    {
+      "name": "memory_claim_supported",
+      "category": "Memory / State",
+      "measurement_method": "rule (state 조회)",
+      "value_type": "pass/fail",
+      "description": "agent가 '기억한다'고 주장한 내용이 memory/state에 존재하는지.",
+      "severity": "High",
+      "mvp_priority": null,
+      "ref_agent_priority": null
+    },
+    {
+      "name": "memory_update_correctness",
+      "category": "Memory / State",
+      "measurement_method": "rule",
+      "value_type": "pass/fail",
+      "description": "저장해야 할 memory를 저장했고, 저장하면 안 되는 내용을 저장하지 않았는지.",
+      "severity": "Medium",
+      "mvp_priority": null,
+      "ref_agent_priority": null
+    },
+    {
+      "name": "state_freshness_score",
+      "category": "Memory / State",
+      "measurement_method": "rule (timestamp/version)",
+      "value_type": "0.0 ~ 1.0",
+      "description": "LangGraph state/checkpoint가 최신인지.",
+      "severity": "Medium",
+      "mvp_priority": null,
+      "ref_agent_priority": null
+    },
+    {
+      "name": "state_value_grounding",
+      "category": "Memory / State",
+      "measurement_method": "rule (event 추적)",
+      "value_type": "0.0 ~ 1.0",
+      "description": "node가 사용한 state 값이 이전 event에서 생성/검증된 값인지.",
+      "severity": "High",
+      "mvp_priority": null,
+      "ref_agent_priority": null
+    },
+    {
+      "name": "output_format_compliance",
+      "category": "Prompt / Instruction",
+      "measurement_method": "deterministic parser",
+      "value_type": "pass/fail",
+      "description": "요구된 output format을 지켰는지.",
+      "severity": "Medium",
+      "mvp_priority": null,
+      "ref_agent_priority": null
+    },
+    {
+      "name": "prompt_template_version_present",
+      "category": "Prompt / Instruction",
+      "measurement_method": "trace 검사",
+      "value_type": "존재 여부",
+      "description": "trace에 prompt template 이름/version이 기록되어 있는지.",
+      "severity": "Low",
+      "mvp_priority": null,
+      "ref_agent_priority": null
+    },
+    {
+      "name": "action_grounding_score",
+      "category": "ReAct / RAG / MCP",
+      "measurement_method": "rule + LLM judge",
+      "value_type": "0.0 ~ 1.0",
+      "description": "action argument가 user input/state/observation에서 근거를 갖는가.",
+      "severity": "High",
+      "mvp_priority": null,
+      "ref_agent_priority": null
+    },
+    {
+      "name": "observation_utilization_score",
+      "category": "ReAct / RAG / MCP",
+      "measurement_method": "LLM judge",
+      "value_type": "0.0 ~ 1.0",
+      "description": "tool observation이 다음 reasoning/final report에 반영되는가.",
+      "severity": "Medium",
+      "mvp_priority": null,
+      "ref_agent_priority": null
+    },
+    {
+      "name": "react_step_completeness",
+      "category": "ReAct / RAG / MCP",
+      "measurement_method": "rule + LLM judge",
+      "value_type": "0.0 ~ 1.0",
+      "description": "Thought/Action/Observation sequence가 완전한가.",
+      "severity": "High",
+      "mvp_priority": null,
+      "ref_agent_priority": null
+    },
+    {
+      "name": "tool_result_grounding_score",
+      "category": "Tool Use",
+      "measurement_method": "LLM judge + rule",
+      "value_type": "0.0 ~ 1.0",
+      "description": "final output이 tool result와 일치하는지.",
+      "severity": "High",
+      "mvp_priority": null,
+      "ref_agent_priority": null
+    },
+    {
+      "name": "tool_selection_accuracy",
+      "category": "Tool Use",
+      "measurement_method": "exact match / LLM judge",
+      "value_type": "0.0 ~ 1.0",
+      "description": "선택한 tool이 task에 적절했는지.",
+      "severity": "High",
+      "mvp_priority": null,
+      "ref_agent_priority": null
+    }
+  ]
+}

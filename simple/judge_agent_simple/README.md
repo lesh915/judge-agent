@@ -183,8 +183,10 @@ Example questions:
 The implementation is grouped by feature area:
 
 ```text
+simple/
+  config/        # file-based runtime config; can be replaced by DB-backed config later
 judge_agent_simple/
-  core/          # schema, session, drift metric registry
+  core/          # config loader, schema, session, drift metric registry
   adapters/      # trace adapter implementations
   analysis/      # analyzer, detectors, report writer, metric-aware tools
   conversation/  # legacy chat, tool/hybrid agent, graph runtime, prompts/state
@@ -192,9 +194,28 @@ judge_agent_simple/
   cli.py         # CLI entrypoint
 ```
 
+## Configuration
+
+Hardcoded runtime data is kept in `simple/config/`:
+
+- `app.json` — CLI defaults, supported chat modes, supported LLM providers.
+- `metrics.json` — drift metric registry previously embedded in code.
+- `detector_rules.json` — reference weblog detector thresholds, required sections, tool names, scoring penalties, gate thresholds, root-cause templates.
+- `conversation.json` — severity ranking, intent keywords, command/help defaults, fallback messages.
+- `llm_profiles.json` — provider default URLs and model profiles such as OpenAI `gpt-4o-mini`.
+- `database_tables.md` — table candidates for a later DB-backed configuration store.
+
+By default the package reads `simple/config`. To use environment-specific config, set:
+
+```bash
+JUDGE_CONFIG_DIR=/absolute/path/to/config
+```
+
+LLM connection settings still come from CLI flags, `.env`, or environment variables such as `JUDGE_LLM_PROVIDER`, `JUDGE_LLM_MODEL`, `JUDGE_LLM_BASE_URL`, and `JUDGE_LLM_API_KEY`.
+
 ## Metric registry
 
-`judge_agent_simple.metrics` contains the first implementation of the drift metric registry based on `docs/DRIFT_METRICS.xlsx`.
+`judge_agent_simple.core.metrics` loads the drift metric registry from `simple/config/metrics.json`. The initial metric content is based on `docs/DRIFT_METRICS.xlsx`, but runtime updates no longer require code edits.
 
 Covered priority groups:
 

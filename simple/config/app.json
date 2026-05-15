@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "defaults": {
+    "adapter": "reference-weblog-jsonl",
+    "session_dir": "artifacts/simple-judge/sessions",
+    "session_id": "default",
+    "chat_mode": "deterministic",
+    "fail_on": "critical",
+    "llm_provider": "auto"
+  },
+  "supported": {
+    "chat_modes": [
+      "deterministic",
+      "deterministic-v2",
+      "hybrid",
+      "graph"
+    ],
+    "fail_on": [
+      "low",
+      "medium",
+      "high",
+      "critical"
+    ],
+    "llm_providers": [
+      "auto",
+      "openai",
+      "openai-compatible",
+      "compatible",
+      "local",
+      "vllm",
+      "lmstudio",
+      "ollama",
+      "localai",
+      "llama-cpp",
+      "mock",
+      "none"
+    ]
+  }
+}

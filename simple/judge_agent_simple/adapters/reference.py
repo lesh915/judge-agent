@@ -4,13 +4,14 @@ import json
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Union
 
+from ..core.config import app_config
 from ..core.schema import SimpleAgentRun, SimpleEvent
 
 
 class ReferenceAgentJsonlAdapter:
     """Normalize reference_agent.weblog_agent TraceLogger JSONL events."""
 
-    name = "reference-weblog-jsonl"
+    name = app_config()["defaults"]["adapter"]
 
     def load(self, path: Union[str, Path]) -> SimpleAgentRun:
         trace_path = Path(path)

@@ -4,9 +4,14 @@ from typing import Any, Dict, List, Optional
 
 from .state import ConversationState
 from ..llm.clients import LlmClient, LlmResult, UnavailableLlmClient
+from ..core.config import app_config, conversation_config
 from ..core.metrics import get_metric
 from .prompts import build_hybrid_messages, compact_state_summary
 from ..analysis import tools
+
+APP_DEFAULTS = app_config()["defaults"]
+CONVERSATION_RULES = conversation_config()
+INTENTS = CONVERSATION_RULES["intents"]
 
 
 class ToolBasedConversationAgent:
@@ -22,7 +27,8 @@ class ToolBasedConversationAgent:
     def __init__(self, state: ConversationState):
         self.state = state
 
-    def load_analysis(self, traces: List[str], adapter_name: str = "reference-weblog-jsonl") -> Dict[str, Any]:
+    def load_analysis(self, traces: List[str], adapter_name: Optional[str] = None) -> Dict[str, Any]:
+        adapter_name = adapter_name or APP_DEFAULTS["adapter"]
         result = tools.load_traces(self.state, traces, adapter_name=adapter_name)
         self.state.record_tool("load_traces", {"traces": traces, "adapter_name": adapter_name}, result)
         return result
@@ -51,17 +57,17 @@ class ToolBasedConversationAgent:
         q = text.lower()
         metric = self._metric_from_text(q)
         finding_id = self._finding_id_from_text(q)
-        if any(token in q for token in ["run 비교", "비교", "compare"]):
+        if any(token in q for token in INTENTS["compare"]):
             return [{"tool": "compare_runs", "arguments": {}}]
-        if any(token in q for token in ["근거", "evidence", "왜", "why"]):
+        if any(token in q for token in INTENTS["evidence"]):
             return [{"tool": "get_evidence", "arguments": {"query": text, "metric": metric, "finding_id": finding_id}}]
-        if any(token in q for token in ["수정", "고쳐", "fix", "recommend", "조치", "우선"]):
+        if any(token in q for token in INTENTS["recommendation"]):
             return [{"tool": "recommend_fix", "arguments": {"query": text, "metric": metric, "finding_id": finding_id}}]
-        if any(token in q for token in ["block", "warning", "fail", "통과", "gate", "실패"]):
+        if any(token in q for token in INTENTS["gate"]):
             return [{"tool": "explain_gate", "arguments": {}}]
         if metric or finding_id:
             return [{"tool": "get_finding", "arguments": {"query": text, "metric": metric, "finding_id": finding_id}}]
-        if any(token in q for token in ["run", "목록", "list"]):
+        if any(token in q for token in INTENTS["runs"]):
             return [{"tool": "list_runs", "arguments": {}}]
         return [{"tool": "summarize_findings", "arguments": {}}]
 
@@ -235,5 +241,5 @@ class HybridConversationAgent(ToolBasedConversationAgent):
         llm_result = self.llm.complete(messages, temperature=0.0)
         self.last_llm_result = llm_result
         if llm_result.used_fallback or not llm_result.content.strip():
-            return deterministic + "\n\n[hybrid fallback] LLM provider가 설정되지 않아 deterministic tool 결과로 답변했습니다."
+            return deterministic + "\n\n" + CONVERSATION_RULES["messages"]["hybrid_fallback"]
         return llm_result.content.strip()

@@ -6,10 +6,12 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from .analyzer import analyze_traces
 from ..conversation.state import ConversationState
+from ..core.config import app_config, conversation_config
 from ..core.metrics import enrich_finding, get_metric, metric_sort_key
 from ..core.schema import AnalysisResult
 
-SEVERITY_RANK = {"critical": 4, "high": 3, "medium": 2, "low": 1}
+APP_DEFAULTS = app_config()["defaults"]
+SEVERITY_RANK = conversation_config()["severity_rank"]
 
 
 def _result_dict(result: AnalysisResult) -> Dict[str, Any]:
@@ -18,7 +20,8 @@ def _result_dict(result: AnalysisResult) -> Dict[str, Any]:
     return data
 
 
-def load_traces(state: ConversationState, traces: Iterable[str], adapter_name: str = "reference-weblog-jsonl") -> Dict[str, Any]:
+def load_traces(state: ConversationState, traces: Iterable[str], adapter_name: Optional[str] = None) -> Dict[str, Any]:
+    adapter_name = adapter_name or APP_DEFAULTS["adapter"]
     trace_list = [str(Path(path)) for path in traces]
     results = [_result_dict(result) for result in analyze_traces(trace_list, adapter_name=adapter_name)]
     state.loaded_traces = trace_list
