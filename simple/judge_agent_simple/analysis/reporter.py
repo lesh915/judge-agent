@@ -4,8 +4,8 @@ import json
 from pathlib import Path
 from typing import Iterable, List, Union
 
-from .metrics import get_metric
-from .schema import AnalysisResult, Finding
+from ..core.metrics import get_metric
+from ..core.schema import AnalysisResult, Finding
 
 
 def markdown_report(results: List[AnalysisResult]) -> str:

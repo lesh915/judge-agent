@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from simple.judge_agent_simple.llm import OpenAICompatibleChatClient, UnavailableLlmClient, create_llm_client, load_llm_config, parse_env_file
+from simple.judge_agent_simple.llm.clients import OpenAICompatibleChatClient, UnavailableLlmClient, create_llm_client, load_llm_config, parse_env_file
 
 
 class LlmConfigTests(unittest.TestCase):

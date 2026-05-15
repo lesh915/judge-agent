@@ -6,7 +6,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from .session import JudgeSessionState, safe_session_id
+from ..core.session import JudgeSessionState, safe_session_id
 
 
 @dataclass

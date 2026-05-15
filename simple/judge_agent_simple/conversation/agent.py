@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from .conversation_state import ConversationState
-from .llm import LlmClient, LlmResult, UnavailableLlmClient
-from .metrics import get_metric
+from .state import ConversationState
+from ..llm.clients import LlmClient, LlmResult, UnavailableLlmClient
+from ..core.metrics import get_metric
 from .prompts import build_hybrid_messages, compact_state_summary
-from . import tools
+from ..analysis import tools
 
 
 class ToolBasedConversationAgent:

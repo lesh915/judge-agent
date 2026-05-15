@@ -7,9 +7,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from simple.judge_agent_simple.conversation_state import ConversationState
-from simple.judge_agent_simple.graph import GraphConversationAgent, langgraph_available
-from simple.judge_agent_simple.llm import UnavailableLlmClient
+from simple.judge_agent_simple.conversation.state import ConversationState
+from simple.judge_agent_simple.conversation.graph import GraphConversationAgent, langgraph_available
+from simple.judge_agent_simple.llm.clients import UnavailableLlmClient
 
 
 class GraphAgentTests(unittest.TestCase):

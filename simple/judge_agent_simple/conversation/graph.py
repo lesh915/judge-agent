@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, TypedDict
 
-from .conversation_agent import HybridConversationAgent, ToolBasedConversationAgent
-from .conversation_state import ConversationState
-from .llm import LlmClient
+from .agent import HybridConversationAgent, ToolBasedConversationAgent
+from .state import ConversationState
+from ..llm.clients import LlmClient
 
 
 class GraphRuntimeState(TypedDict, total=False):

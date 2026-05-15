@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-from .schema import Finding, SimpleAgentRun
+from ..core.schema import Finding, SimpleAgentRun
 
 REQUIRED_SECTIONS = [
     "Summary",

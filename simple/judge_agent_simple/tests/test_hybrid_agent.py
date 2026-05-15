@@ -7,9 +7,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from simple.judge_agent_simple.conversation_agent import HybridConversationAgent
-from simple.judge_agent_simple.conversation_state import ConversationState
-from simple.judge_agent_simple.llm import MockLlmClient, UnavailableLlmClient
+from simple.judge_agent_simple.conversation.agent import HybridConversationAgent
+from simple.judge_agent_simple.conversation.state import ConversationState
+from simple.judge_agent_simple.llm.clients import MockLlmClient, UnavailableLlmClient
 
 
 class HybridAgentTests(unittest.TestCase):

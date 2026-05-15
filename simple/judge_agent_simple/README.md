@@ -178,6 +178,20 @@ Example questions:
 - `그 근거는?`
 - `run 비교`
 
+## Package layout
+
+The implementation is grouped by feature area:
+
+```text
+judge_agent_simple/
+  core/          # schema, session, drift metric registry
+  adapters/      # trace adapter implementations
+  analysis/      # analyzer, detectors, report writer, metric-aware tools
+  conversation/  # legacy chat, tool/hybrid agent, graph runtime, prompts/state
+  llm/           # .env loader and OpenAI-compatible/local LLM clients
+  cli.py         # CLI entrypoint
+```
+
 ## Metric registry
 
 `judge_agent_simple.metrics` contains the first implementation of the drift metric registry based on `docs/DRIFT_METRICS.xlsx`.

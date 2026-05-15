@@ -7,10 +7,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from simple.judge_agent_simple.conversation_agent import ToolBasedConversationAgent
-from simple.judge_agent_simple.conversation_state import ConversationState, load_conversation_state
-from simple.judge_agent_simple.metrics import get_metric, validate_metric_coverage
-from simple.judge_agent_simple.tools import load_traces, summarize_findings
+from simple.judge_agent_simple.conversation.agent import ToolBasedConversationAgent
+from simple.judge_agent_simple.conversation.state import ConversationState, load_conversation_state
+from simple.judge_agent_simple.core.metrics import get_metric, validate_metric_coverage
+from simple.judge_agent_simple.analysis.tools import load_traces, summarize_findings
 
 
 class ConversationAgentTests(unittest.TestCase):

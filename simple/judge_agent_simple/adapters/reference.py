@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Union
 
-from .schema import SimpleAgentRun, SimpleEvent
+from ..core.schema import SimpleAgentRun, SimpleEvent
 
 
 class ReferenceAgentJsonlAdapter:

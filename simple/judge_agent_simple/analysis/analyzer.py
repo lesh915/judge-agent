@@ -3,9 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterable, List, Union
 
-from .adapter import ReferenceAgentJsonlAdapter
+from ..adapters.reference import ReferenceAgentJsonlAdapter
 from .detectors import ReferenceWebLogDetector, gate_for, score_findings
-from .schema import AnalysisResult
+from ..core.schema import AnalysisResult
 
 
 def analyze_trace(path: Union[str, Path], adapter_name: str = "reference-weblog-jsonl") -> AnalysisResult:

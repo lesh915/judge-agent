@@ -204,11 +204,11 @@ Metric 반영을 위해 다음 파일을 추가/수정한다.
 
 ```text
 judge_agent_simple/
-  metrics.py             # DriftMetricSpec registry
-  tools.py               # metric-aware analysis tools
-  conversation_state.py  # focused_metric / metric_history 저장
-  conversation_agent.py  # metric 기반 planning/follow-up
-  reporter.py            # metric registry metadata 포함
+  core/metrics.py          # DriftMetricSpec registry
+  analysis/tools.py        # metric-aware analysis tools
+  conversation/state.py    # focused_metric / metric_history 저장
+  conversation/agent.py    # metric 기반 planning/follow-up
+  analysis/reporter.py     # metric registry metadata 포함
   tests/
     test_metrics.py
     test_conversation_metrics.py
@@ -227,14 +227,12 @@ judge_agent_simple/
 
 ```text
 judge_agent_simple/
-  chat_agent.py          # 기존 deterministic responder 유지
-  conversation_agent.py  # 신규: 일반 대화형 agent runtime
-  conversation_state.py  # 신규: agent state schema
-  tools.py               # 신규: analysis tools registry
-  llm.py                 # 신규: LLM provider abstraction
-  planner.py             # 신규: intent/task planning
-  prompts.py             # 신규: system prompt / tool policy / answer contract
-  graph.py               # 신규: optional LangGraph workflow
+  core/                 # schema, session, metric registry
+  adapters/             # trace adapters
+  analysis/             # analyzer, detectors, tools, reporter
+  conversation/         # legacy chat, tool/hybrid agent, state, prompts, graph runtime
+  llm/                  # provider abstraction and .env configuration
+  cli.py                # command-line entrypoint
 ```
 
 ## 4.1 Conversation State
@@ -312,7 +310,7 @@ python3 -m simple.judge_agent_simple.cli chat \
 
 ## Phase 1. Tool Registry 도입
 
-상태: **1차 구현 완료** (`metrics.py`, `tools.py`, `deterministic-v2`에서 사용)
+상태: **1차 구현 완료** (`core/metrics.py`, `analysis/tools.py`, `deterministic-v2`에서 사용)
 
 목표:
 
@@ -320,8 +318,8 @@ python3 -m simple.judge_agent_simple.cli chat \
 
 작업:
 
-- `metrics.py` 추가: `docs/DRIFT_METRICS.xlsx` 기반 `DriftMetricSpec` registry 정의
-- `tools.py` 추가
+- `core/metrics.py` 추가: `docs/DRIFT_METRICS.xlsx` 기반 `DriftMetricSpec` registry 정의
+- `analysis/tools.py` 추가
 - 각 tool 입출력 schema 정의
 - session state를 받아 동작하는 pure function 형태로 구현
 - tool result에 `metric`, `severity`, `priority`, `evidence`, `source`, `confidence` 포함
@@ -345,7 +343,7 @@ python3 -m simple.judge_agent_simple.cli chat \
 
 ## Phase 2. Conversation State / Session 확장
 
-상태: **1차 구현 완료** (`conversation_state.py`, `*.conversation.json` 저장)
+상태: **1차 구현 완료** (`conversation/state.py`, `*.conversation.json` 저장)
 
 목표:
 
@@ -353,7 +351,7 @@ python3 -m simple.judge_agent_simple.cli chat \
 
 작업:
 
-- `conversation_state.py` 추가
+- `conversation/state.py` 추가
 - 기존 `JudgeSessionState`와 호환되도록 migration 함수 제공
 - messages, tool_calls, evidence, focus, loaded_traces 저장
 - focused_metric, metric_history, severity_filter 저장
@@ -366,7 +364,7 @@ python3 -m simple.judge_agent_simple.cli chat \
 
 ## Phase 3. Plain Conversational Agent Runtime 구현
 
-상태: **1차 구현 완료** (`conversation_agent.py`, `chat --mode deterministic-v2`)
+상태: **1차 구현 완료** (`conversation/agent.py`, `chat --mode deterministic-v2`)
 
 목표:
 
@@ -374,7 +372,7 @@ python3 -m simple.judge_agent_simple.cli chat \
 
 작업:
 
-- `conversation_agent.py` 추가
+- `conversation/agent.py` 추가
 - deterministic planner 구현
 - 질문 유형별 tool chain 정의
   - summary → `summarize_findings`
@@ -397,7 +395,7 @@ python3 -m simple.judge_agent_simple.cli chat \
 
 ## Phase 4. LLM Provider Abstraction 추가
 
-상태: **1차 구현 완료** (`llm.py`, `prompts.py`, `hybrid` response synthesis)
+상태: **1차 구현 완료** (`llm/clients.py`, `conversation/prompts.py`, `hybrid` response synthesis)
 
 목표:
 
@@ -405,7 +403,7 @@ python3 -m simple.judge_agent_simple.cli chat \
 
 작업:
 
-- `llm.py` 추가
+- `llm/clients.py` 추가
 - provider interface 정의
 - 환경변수 기반 OpenAI/LangChain provider 선택
 - API key 없으면 deterministic fallback
@@ -448,7 +446,7 @@ class LlmClient(Protocol):
 
 ## Phase 6. Optional LangGraph Runtime
 
-상태: **1차 구현 완료** (`graph.py`, `chat --mode graph`, LangGraph 미설치 fallback)
+상태: **1차 구현 완료** (`conversation/graph.py`, `chat --mode graph`, LangGraph 미설치 fallback)
 
 목표:
 
@@ -469,7 +467,7 @@ START
 
 작업:
 
-- `graph.py` 추가
+- `conversation/graph.py` 추가
 - StateGraph 구성
 - checkpoint 옵션 추가
 - LangGraph 미설치 시 graceful fallback
@@ -529,9 +527,9 @@ START
 
 포함:
 
-- `metrics.py`
-- `tools.py`
-- `conversation_state.py`
+- `core/metrics.py`
+- `analysis/tools.py`
+- `conversation/state.py`
 - 기존 `JudgeSessionState`와 호환 가능한 migration path
 - unit tests
 
@@ -547,7 +545,7 @@ START
 
 포함:
 
-- `conversation_agent.py`
+- `conversation/agent.py`
 - deterministic planner
 - `chat --mode deterministic-v2`
 - follow-up focus 유지
@@ -559,8 +557,8 @@ START
 
 포함:
 
-- `llm.py`
-- `prompts.py`
+- `llm/clients.py`
+- `conversation/prompts.py`
 - prompt/tool policy
 - mock LLM tests
 - `chat --mode hybrid`
@@ -573,7 +571,7 @@ START
 
 포함:
 
-- `graph.py`
+- `conversation/graph.py`
 - `chat --mode graph`
 - `--require-langgraph`
 - optional dependency fallback

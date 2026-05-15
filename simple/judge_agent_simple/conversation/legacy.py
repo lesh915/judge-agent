@@ -3,8 +3,8 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
-from .schema import AnalysisResult
-from .session import JudgeSessionState
+from ..core.schema import AnalysisResult
+from ..core.session import JudgeSessionState
 
 
 SEVERITY_RANK = {"critical": 4, "high": 3, "medium": 2, "low": 1}

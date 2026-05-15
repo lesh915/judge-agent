@@ -7,7 +7,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from simple.judge_agent_simple.analyzer import analyze_trace
+from simple.judge_agent_simple.analysis.analyzer import analyze_trace
 
 
 class SimpleJudgeTests(unittest.TestCase):

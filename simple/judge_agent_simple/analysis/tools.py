@@ -5,9 +5,9 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 from .analyzer import analyze_traces
-from .conversation_state import ConversationState
-from .metrics import enrich_finding, get_metric, metric_sort_key
-from .schema import AnalysisResult
+from ..conversation.state import ConversationState
+from ..core.metrics import enrich_finding, get_metric, metric_sort_key
+from ..core.schema import AnalysisResult
 
 SEVERITY_RANK = {"critical": 4, "high": 3, "medium": 2, "low": 1}
 

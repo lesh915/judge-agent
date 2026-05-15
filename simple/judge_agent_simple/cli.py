@@ -7,14 +7,14 @@ import sys
 from pathlib import Path
 from typing import List
 
-from .analyzer import analyze_trace, analyze_traces
-from .chat_agent import JudgeChatAgent
-from .conversation_agent import HybridConversationAgent, ToolBasedConversationAgent
-from .conversation_state import ConversationState, load_conversation_state, save_conversation_state
-from .graph import GraphConversationAgent
-from .llm import create_llm_client
-from .reporter import markdown_report, write_json, write_markdown
-from .session import JudgeSessionState, load_session, save_session
+from .analysis.analyzer import analyze_trace, analyze_traces
+from .conversation.legacy import JudgeChatAgent
+from .conversation.agent import HybridConversationAgent, ToolBasedConversationAgent
+from .conversation.state import ConversationState, load_conversation_state, save_conversation_state
+from .conversation.graph import GraphConversationAgent
+from .llm.clients import create_llm_client
+from .analysis.reporter import markdown_report, write_json, write_markdown
+from .core.session import JudgeSessionState, load_session, save_session
 
 
 def _configure_output_encoding() -> None:
