@@ -91,15 +91,54 @@ py -m simple.judge_agent_simple.cli chat `
   --session-id weblog-drift-review
 ```
 
-Hybrid mode with OpenAI-compatible configuration:
+Hybrid mode with `.env` / OpenAI-compatible configuration:
 
 ```bash
-OPENAI_API_KEY=... python3 -m simple.judge_agent_simple.cli chat \
+cp simple/.env.example simple/.env
+# edit JUDGE_LLM_PROVIDER, JUDGE_LLM_MODEL, JUDGE_LLM_BASE_URL, JUDGE_LLM_API_KEY
+python3 -m simple.judge_agent_simple.cli chat \
   --mode hybrid \
-  --llm-provider openai \
-  --llm-model gpt-4o-mini \
+  --env-file simple/.env \
   --traces 'artifacts/weblog-reference/*.jsonl' \
   --session-id weblog-drift-review
+```
+
+OpenAI example:
+
+```bash
+JUDGE_LLM_PROVIDER=openai \
+JUDGE_LLM_MODEL=gpt-4o-mini \
+JUDGE_LLM_API_KEY=... \
+python3 -m simple.judge_agent_simple.cli chat \
+  --mode hybrid \
+  --traces 'artifacts/weblog-reference/*.jsonl'
+```
+
+Local / OpenAI-compatible examples:
+
+```bash
+# vLLM or generic OpenAI-compatible server
+python3 -m simple.judge_agent_simple.cli chat \
+  --mode hybrid \
+  --llm-provider openai-compatible \
+  --llm-model meta-llama/Llama-3.1-8B-Instruct \
+  --llm-base-url http://localhost:8000/v1 \
+  --llm-api-key local \
+  --traces 'artifacts/weblog-reference/*.jsonl'
+
+# LM Studio default endpoint
+python3 -m simple.judge_agent_simple.cli chat \
+  --mode hybrid \
+  --llm-provider lmstudio \
+  --llm-model local-model \
+  --traces 'artifacts/weblog-reference/*.jsonl'
+
+# Ollama OpenAI-compatible endpoint
+python3 -m simple.judge_agent_simple.cli chat \
+  --mode hybrid \
+  --llm-provider ollama \
+  --llm-model llama3.1 \
+  --traces 'artifacts/weblog-reference/*.jsonl'
 ```
 
 For tests and local dry-runs without external calls:

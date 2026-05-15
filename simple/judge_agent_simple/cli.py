@@ -101,9 +101,9 @@ def run_conversation_chat(args) -> int:
         state = ConversationState(session_id=args.session_id)
 
     if args.mode == "graph":
-        agent = GraphConversationAgent(state, llm=create_llm_client(args.llm_provider, args.llm_model), require_langgraph=args.require_langgraph)
+        agent = GraphConversationAgent(state, llm=create_llm_client(args.llm_provider, args.llm_model, env_file=args.env_file, base_url=args.llm_base_url, api_key=args.llm_api_key), require_langgraph=args.require_langgraph)
     elif args.mode == "hybrid":
-        agent = HybridConversationAgent(state, llm=create_llm_client(args.llm_provider, args.llm_model))
+        agent = HybridConversationAgent(state, llm=create_llm_client(args.llm_provider, args.llm_model, env_file=args.env_file, base_url=args.llm_base_url, api_key=args.llm_api_key))
     else:
         agent = ToolBasedConversationAgent(state)
     if args.traces:
@@ -161,8 +161,11 @@ def main(argv=None) -> int:
     p_chat.add_argument("--session-dir", type=Path, default=Path("artifacts/simple-judge/sessions"))
     p_chat.add_argument("--resume", action="store_true", help="Resume a saved judge chat session")
     p_chat.add_argument("--mode", choices=["deterministic", "deterministic-v2", "hybrid", "graph"], default="deterministic", help="Chat runtime mode. deterministic keeps the legacy responder; deterministic-v2 uses tool-based conversation state; hybrid adds optional LLM synthesis; graph uses optional LangGraph runtime with fallback.")
-    p_chat.add_argument("--llm-provider", default="auto", help="LLM provider for hybrid/graph mode: auto, openai, mock, or none")
+    p_chat.add_argument("--llm-provider", default="auto", help="LLM provider for hybrid/graph mode: auto, openai, openai-compatible, local, vllm, lmstudio, ollama, mock, or none")
     p_chat.add_argument("--llm-model", help="LLM model name for hybrid/graph mode")
+    p_chat.add_argument("--llm-base-url", help="OpenAI-compatible base URL, e.g. http://localhost:1234/v1")
+    p_chat.add_argument("--llm-api-key", help="LLM API key. For local compatible servers this can be any non-empty value if auth is disabled.")
+    p_chat.add_argument("--env-file", help="Path to .env file. Defaults to ./.env or ./simple/.env when present.")
     p_chat.add_argument("--require-langgraph", action="store_true", help="Fail graph mode if LangGraph is not installed instead of falling back to hybrid runtime")
 
     args = parser.parse_args(argv)

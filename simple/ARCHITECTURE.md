@@ -200,7 +200,10 @@ User Message
 - LLM은 drift finding을 임의 생성하지 않는다.
 - tool result, metric registry, evidence, state summary만 prompt context로 받는다.
 - provider가 없거나 실패하면 deterministic-v2 응답으로 fallback한다.
-- `llm.py`는 stdlib 기반 provider abstraction을 제공하며, 현재 `openai`, `mock`, `none/auto fallback`을 지원한다.
+- `llm.py`는 stdlib 기반 provider abstraction과 `.env` loader를 제공한다.
+- 현재 `openai`, `openai-compatible`, `local`, `vllm`, `lmstudio`, `ollama`, `localai`, `llama-cpp`, `mock`, `none/auto fallback`을 지원한다.
+- 설정 우선순위는 CLI 인자 → `.env`/환경변수 → provider별 기본값 순서다.
+- 주요 변수: `JUDGE_LLM_PROVIDER`, `JUDGE_LLM_MODEL`, `JUDGE_LLM_BASE_URL`, `JUDGE_LLM_API_KEY`, `JUDGE_LLM_TIMEOUT_SECONDS`, `JUDGE_LLM_TEMPERATURE`.
 
 CLI:
 
