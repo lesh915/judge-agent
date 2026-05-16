@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { ChatPanel } from './components/ChatPanel';
 import { ReferenceAgentPanel } from './components/ReferenceAgentPanel';
-import { MetricCard } from './components/MetricCard';
+import { MetricsPanel } from './components/MetricsPanel';
 import * as api from './api/judgeClient';
 import type { ChatMessage, ConfigSnapshot, ReferenceRun, AnalysisSummary, Finding } from './types/judge';
-import { ConfigProvider, Layout, Row, Col, Typography, message } from 'antd';
+import { ConfigProvider, Layout, Row, Col, Typography, message, Card } from 'antd';
 
 const { Header, Content } = Layout;
 const { Title } = Typography;
@@ -151,27 +151,10 @@ function App() {
             <Col span={12} style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '24px' }}>
               
               {/* Metrics Section */}
-              <div style={{ borderRadius: '8px', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', backgroundColor: '#fff', padding: '20px' }}>
+              <Card bordered={false} style={{ borderRadius: '8px', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)', flexShrink: 0 }}>
                 <Title level={4} style={{ margin: '0 0 16px 0' }}>Judge Agent Metrics</Title>
-                <Row gutter={16}>
-                  <Col span={12}>
-                    <MetricCard
-                      label="Gate Status"
-                      value={summary ? (summary.gateCounts.block > 0 ? 'Block' : summary.gateCounts.warning > 0 ? 'Warning' : 'Pass') : '-'}
-                      note={summary ? (summary.gateCounts.block > 0 ? 'Action required.' : 'No critical drift.') : 'Run judge to see status'}
-                      tone={summary ? (summary.gateCounts.block > 0 ? 'critical' : summary.gateCounts.warning > 0 ? 'warning' : 'pass') : undefined}
-                    />
-                  </Col>
-                  <Col span={12}>
-                    <MetricCard
-                      label="Critical Findings"
-                      value={summary ? summary.severityCounts.critical : '-'}
-                      note={summary ? `Out of ${findings.length} total findings` : 'Run judge to see findings'}
-                      tone={summary && summary.severityCounts.critical > 0 ? 'critical' : 'pass'}
-                    />
-                  </Col>
-                </Row>
-              </div>
+                <MetricsPanel summary={summary} findings={findings} />
+              </Card>
               
               {/* Chat Section */}
               <div style={{ flexGrow: 1, minHeight: 0, overflow: 'hidden', borderRadius: '8px', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)' }}>
