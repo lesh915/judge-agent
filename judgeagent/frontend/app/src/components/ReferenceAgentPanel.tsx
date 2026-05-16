@@ -22,7 +22,7 @@ export function ReferenceAgentPanel({ referenceRun, onRun, onJudge, isLoading }:
   };
 
   return (
-    <Card bordered={false} style={{ height: '100%' }}>
+    <Card bordered={false} style={{ height: '100%' }} styles={{ body: { padding: '24px', display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0, boxSizing: 'border-box' } }}>
       <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Title level={4} style={{ margin: 0 }}>Reference Agent Controls</Title>
         <Tag color={referenceRun.status === 'succeeded' ? 'success' : referenceRun.status === 'failed' ? 'error' : 'default'} style={{ margin: 0, textTransform: 'uppercase' }}>
@@ -88,9 +88,11 @@ export function ReferenceAgentPanel({ referenceRun, onRun, onJudge, isLoading }:
         </div>
       )}
       
-      <Divider style={{ margin: '16px 0' }} />
-      
-      <ReferenceChatView run={referenceRun} />
+      <Divider style={{ margin: '16px 0 0 0' }} />
+
+      <div style={{ flexGrow: 1, minHeight: 0, overflowY: 'auto', paddingTop: '16px' }}>
+        <ReferenceChatView run={referenceRun} />
+      </div>
     </Card>
   );
 }
