@@ -9,5 +9,7 @@ __pycache__/
 
 # Local environment / secrets
 .env
+judgeagent/.env
 reference_agent/weblog_agent/.env
+judgeagent/reference/agent/weblog_agent/.env
 *.env.local

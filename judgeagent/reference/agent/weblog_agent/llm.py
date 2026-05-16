@@ -11,6 +11,8 @@ from typing import Any, Dict, List, Optional, Union
 
 
 DEFAULT_ENV_PATHS = (
+    Path(__file__).resolve().parent / ".env",
+    Path("judgeagent/reference/agent/weblog_agent/.env"),
     Path("reference_agent/weblog_agent/.env"),
     Path(".env"),
 )
