@@ -44,15 +44,23 @@ def _event_counts(path: Path) -> Dict[str, int]:
 def _timeline_preview(path: Path, limit: int = 100) -> List[Dict[str, Any]]:
     interesting = {"react_step", "tool_start", "tool_end", "mcp_end", "validation_result", "final_output", "chat_response_generated"}
     rows: List[Dict[str, Any]] = []
+    final_output_event = None
     for event in _read_jsonl(path):
         event_type = str(event.get("type") or "unknown")
         if event_type not in interesting:
             continue
         title = str(event.get("action") or event.get("tool") or event.get("node") or event.get("method") or event_type)
         detail = str(event.get("thought") or event.get("observation") or event.get("response") or event.get("content") or event.get("status") or "")[:1000]
-        rows.append({"index": event.get("_index"), "type": event_type, "title": title, "detail": detail})
-        if len(rows) >= limit:
-            break
+        row = {"index": event.get("_index"), "type": event_type, "title": title, "detail": detail}
+        if event_type == "final_output":
+            final_output_event = row
+        else:
+            rows.append(row)
+            if len(rows) >= limit:
+                break
+    # Always append final_output at the end if it exists
+    if final_output_event:
+        rows.append(final_output_event)
     return rows
 
 

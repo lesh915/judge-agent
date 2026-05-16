@@ -68,7 +68,15 @@ export function ReferenceChatView({ run }: { run: ReferenceRun }) {
 
         {/* Final Response */}
         <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.6, color: '#1e293b' }}>
-          {finalEvent ? finalEvent.detail : (run.status === 'failed' ? <Text type="danger">Agent execution failed.</Text> : <Text type="secondary" italic>Thinking...</Text>)}
+          {finalEvent ? finalEvent.detail : (
+            run.status === 'failed' ? (
+              <Text type="danger">Agent execution failed.</Text>
+            ) : run.status === 'succeeded' ? (
+              <Text type="warning" italic>Processing final results...</Text>
+            ) : (
+              <Text type="secondary" italic>Thinking...</Text>
+            )
+          )}
         </div>
       </div>
     </div>
