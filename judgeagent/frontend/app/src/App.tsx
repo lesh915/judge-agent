@@ -137,7 +137,7 @@ function App() {
             
             {/* Left Panel: Reference Agent Monitor */}
             <Col span={12} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ flexGrow: 1, overflowY: 'auto', borderRadius: '8px', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)' }}>
+              <div style={{ flexGrow: 1, minHeight: 0, overflowY: 'auto', borderRadius: '8px', boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)' }}>
                 <ReferenceAgentPanel 
                   referenceRun={safeReferenceRun} 
                   onRun={handleRun} 
