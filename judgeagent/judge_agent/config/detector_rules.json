@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "reference_weblog": {
+    "required_output_sections": [
+      "Summary",
+      "Key Metrics",
+      "Anomalies",
+      "Evidence",
+      "RAG Context",
+      "MCP Context",
+      "Recommended Actions",
+      "Confidence & Limitations"
+    ],
+    "expected_validation_node": "validate_findings",
+    "validation_skip_reason": "fault_validation_skipped",
+    "target_path_regex": "(/[A-Za-z0-9_./-]+)",
+    "parse_error_ratio_threshold": 0.5,
+    "tools": {
+      "filter_log_records": "filter_log_records",
+      "compute_log_metrics": "compute_log_metrics",
+      "parse_access_log": "parse_access_log",
+      "retrieve_runbook": "retrieve_runbook"
+    },
+    "mcp_tools_call_method": "tools/call",
+    "metric_fault_flag": "faultInjected",
+    "scoring_penalty": {
+      "critical": 30,
+      "high": 15,
+      "medium": 7,
+      "low": 2
+    },
+    "gate_thresholds": {
+      "block_score_below": 70,
+      "warning_score_below": 85
+    },
+    "metric_root_causes": {
+      "validation_path_coverage": "graph transition이 validation 단계를 우회했거나 validation 결과를 gate 조건으로 강제하지 않은 구조 문제",
+      "target_endpoint_consistency": "사용자 요청에서 파싱한 targetPath가 tool argument 생성 단계에 안정적으로 고정되지 않은 문제",
+      "metric_result_consistency": "metric 산출이 검증 가능한 tool output이 아니라 내부 상태/환각 값으로 대체된 문제",
+      "output_contract_compliance": "prompt/output contract가 finalization 직전에 검증되지 않은 문제",
+      "parse_error_handling_score": "parse 실패율이 높은데도 분석을 계속 진행하고 confidence를 낮추거나 실패 처리하지 않은 문제"
+    }
+  }
+}

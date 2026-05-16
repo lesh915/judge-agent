@@ -2098,5 +2098,590 @@
     ],
     "createdAt": 1778945400.0993311,
     "updatedAt": 1778945400.0993316
+  },
+  "ref_20260517_015652_normal-login-error-spike": {
+    "id": "ref_20260517_015652_normal-login-error-spike",
+    "mode": "fixture",
+    "status": "succeeded",
+    "fixtureId": "normal-login-error-spike",
+    "userInput": "지난 1시간 동안 /api/login endpoint에서 5xx 에러율이 평소보다 증가했는지 분석하고 근거를 알려주세요.",
+    "accessLogPath": "C:\\workspaces\\judge-agent\\.claude\\worktrees\\distracted-bohr-49f1af\\reference_agent\\weblog_agent\\fixtures\\access.log",
+    "useLlm": true,
+    "tracePath": "artifacts\\frontend-api\\reference-runs\\traces\\ref_20260517_015652_normal-login-error-spike.jsonl",
+    "reportPath": "artifacts\\frontend-api\\reference-runs\\reports\\ref_20260517_015652_normal-login-error-spike.md",
+    "eventCounts": {
+      "run_start": 1,
+      "instruction_snapshot": 1,
+      "node_start": 4,
+      "mcp_start": 2,
+      "mcp_end": 2,
+      "agent_components": 1,
+      "node_end": 4,
+      "edge_selected": 3,
+      "llm_skipped": 11,
+      "react_step": 10,
+      "observation": 9,
+      "tool_start": 6,
+      "tool_end": 6,
+      "validation_result": 2,
+      "final_output": 1,
+      "run_end": 1
+    },
+    "timelinePreview": [
+      {
+        "index": 4,
+        "type": "mcp_end",
+        "title": "tools/list",
+        "detail": ""
+      },
+      {
+        "index": 10,
+        "type": "react_step",
+        "title": "parse_user_request",
+        "detail": "Need to understand the user's target endpoint and metrics first."
+      },
+      {
+        "index": 13,
+        "type": "react_step",
+        "title": "read_log_file",
+        "detail": "Need raw access logs before computing evidence."
+      },
+      {
+        "index": 14,
+        "type": "tool_start",
+        "title": "read_log_file",
+        "detail": ""
+      },
+      {
+        "index": 15,
+        "type": "tool_end",
+        "title": "read_log_file",
+        "detail": ""
+      },
+      {
+        "index": 18,
+        "type": "react_step",
+        "title": "parse_access_log",
+        "detail": "Need structured log records for analysis."
+      },
+      {
+        "index": 19,
+        "type": "tool_start",
+        "title": "parse_access_log",
+        "detail": ""
+      },
+      {
+        "index": 20,
+        "type": "tool_end",
+        "title": "parse_access_log",
+        "detail": ""
+      },
+      {
+        "index": 23,
+        "type": "react_step",
+        "title": "filter_log_records",
+        "detail": "Need records scoped to the requested endpoint/status range."
+      },
+      {
+        "index": 24,
+        "type": "tool_start",
+        "title": "filter_log_records",
+        "detail": ""
+      },
+      {
+        "index": 25,
+        "type": "tool_end",
+        "title": "filter_log_records",
+        "detail": ""
+      },
+      {
+        "index": 28,
+        "type": "react_step",
+        "title": "compute_log_metrics",
+        "detail": "Need deterministic metrics from filtered records."
+      },
+      {
+        "index": 29,
+        "type": "tool_start",
+        "title": "compute_log_metrics",
+        "detail": ""
+      },
+      {
+        "index": 30,
+        "type": "tool_end",
+        "title": "compute_log_metrics",
+        "detail": ""
+      },
+      {
+        "index": 33,
+        "type": "react_step",
+        "title": "detect_log_anomalies",
+        "detail": "Need anomaly detection against thresholds and baseline."
+      },
+      {
+        "index": 34,
+        "type": "tool_start",
+        "title": "detect_log_anomalies",
+        "detail": ""
+      },
+      {
+        "index": 35,
+        "type": "tool_end",
+        "title": "detect_log_anomalies",
+        "detail": ""
+      },
+      {
+        "index": 38,
+        "type": "react_step",
+        "title": "retrieve_runbook",
+        "detail": "Need runbook context via RAG for likely causes and actions."
+      },
+      {
+        "index": 39,
+        "type": "tool_start",
+        "title": "retrieve_runbook",
+        "detail": ""
+      },
+      {
+        "index": 40,
+        "type": "tool_end",
+        "title": "retrieve_runbook",
+        "detail": ""
+      },
+      {
+        "index": 43,
+        "type": "react_step",
+        "title": "get_service_context",
+        "detail": "Need MCP service metadata for owner, SLO, dependencies, and deployments."
+      },
+      {
+        "index": 45,
+        "type": "mcp_end",
+        "title": "get_service_context",
+        "detail": ""
+      },
+      {
+        "index": 48,
+        "type": "react_step",
+        "title": "collect_evidence",
+        "detail": "Need evidence snippets tied to computed metrics."
+      },
+      {
+        "index": 52,
+        "type": "react_step",
+        "title": "finish",
+        "detail": "All required observations are available; generate final answer."
+      },
+      {
+        "index": 56,
+        "type": "validation_result",
+        "title": "validation_result",
+        "detail": ""
+      },
+      {
+        "index": 60,
+        "type": "validation_result",
+        "title": "validation_result",
+        "detail": ""
+      },
+      {
+        "index": 62,
+        "type": "final_output",
+        "title": "final_output",
+        "detail": "## Summary\n\nAnalyzed web logs for `/api/login` using a ReAct agent flow with tools, RAG, and MCP context. Request count was 80 and error rate was 15.00%.\n\n## Key Metrics\n\n- request_count: 80\n- error_count: 12\n- 5xx_count: 12\n- error_rate: 15.00%\n- p95_latency_ms: 1400\n\n## Anomalies\n\n- **error_rate_spike** (critical): error_rate=0.15 expected=0.05 — error_rate exceeded critical threshold\n- **latency_spike** (medium): p95_latency_ms=1400 expected=1000 — p95 latency exceeded warning threshold\n\n## Evidence\n\nRepresentative log lines:\n\n- `203.0.113.1 - - [13/May/2026:03:00:00 +0000] \"POST /api/login HTTP/1.1\" 500 512 \"-\" \"fixture-agent\" 1400`\n- `203.0.113.2 - - [13/May/2026:03:00:30 +0000] \"POST /api/login HTTP/1.1\" 500 512 \"-\" \"fixture-agent\" 1400`\n- `203.0.113.3 - - [13/May/2026:03:01:00 +0000] \"POST /api/login HTTP/1.1\" 500 512 \"-\" \"fixture-agent\" 1400`\n- `203.0.113.4 - - [13/May/2026:03:01:30 +0000] \"POST /api/login HTTP/1.1\" 500 512 \"-\" \"fixture-agent\" 1400`\n- `203.0.113.5 - - [13/May/2"
+      }
+    ],
+    "createdAt": 1778950612.4501483,
+    "updatedAt": 1778950612.4501493
+  },
+  "ref_20260517_015725_drift-prompt-output-contract": {
+    "id": "ref_20260517_015725_drift-prompt-output-contract",
+    "mode": "fixture",
+    "status": "succeeded",
+    "fixtureId": "drift-prompt-output-contract",
+    "userInput": "지난 1시간 동안 /api/login endpoint에서 5xx 에러율을 분석하고 근거와 한계를 알려주세요.",
+    "accessLogPath": "C:\\workspaces\\judge-agent\\.claude\\worktrees\\distracted-bohr-49f1af\\reference_agent\\weblog_agent\\fixtures\\access.log",
+    "useLlm": true,
+    "tracePath": "artifacts\\frontend-api\\reference-runs\\traces\\ref_20260517_015725_drift-prompt-output-contract.jsonl",
+    "reportPath": "artifacts\\frontend-api\\reference-runs\\reports\\ref_20260517_015725_drift-prompt-output-contract.md",
+    "eventCounts": {
+      "run_start": 1,
+      "instruction_snapshot": 1,
+      "node_start": 4,
+      "mcp_start": 2,
+      "mcp_end": 2,
+      "agent_components": 1,
+      "node_end": 4,
+      "edge_selected": 3,
+      "llm_skipped": 10,
+      "react_step": 10,
+      "observation": 9,
+      "tool_start": 6,
+      "tool_end": 6,
+      "validation_result": 2,
+      "final_output": 1,
+      "run_end": 1
+    },
+    "timelinePreview": [
+      {
+        "index": 4,
+        "type": "mcp_end",
+        "title": "tools/list",
+        "detail": ""
+      },
+      {
+        "index": 10,
+        "type": "react_step",
+        "title": "parse_user_request",
+        "detail": "Need to understand the user's target endpoint and metrics first."
+      },
+      {
+        "index": 13,
+        "type": "react_step",
+        "title": "read_log_file",
+        "detail": "Need raw access logs before computing evidence."
+      },
+      {
+        "index": 14,
+        "type": "tool_start",
+        "title": "read_log_file",
+        "detail": ""
+      },
+      {
+        "index": 15,
+        "type": "tool_end",
+        "title": "read_log_file",
+        "detail": ""
+      },
+      {
+        "index": 18,
+        "type": "react_step",
+        "title": "parse_access_log",
+        "detail": "Need structured log records for analysis."
+      },
+      {
+        "index": 19,
+        "type": "tool_start",
+        "title": "parse_access_log",
+        "detail": ""
+      },
+      {
+        "index": 20,
+        "type": "tool_end",
+        "title": "parse_access_log",
+        "detail": ""
+      },
+      {
+        "index": 23,
+        "type": "react_step",
+        "title": "filter_log_records",
+        "detail": "Need records scoped to the requested endpoint/status range."
+      },
+      {
+        "index": 24,
+        "type": "tool_start",
+        "title": "filter_log_records",
+        "detail": ""
+      },
+      {
+        "index": 25,
+        "type": "tool_end",
+        "title": "filter_log_records",
+        "detail": ""
+      },
+      {
+        "index": 28,
+        "type": "react_step",
+        "title": "compute_log_metrics",
+        "detail": "Need deterministic metrics from filtered records."
+      },
+      {
+        "index": 29,
+        "type": "tool_start",
+        "title": "compute_log_metrics",
+        "detail": ""
+      },
+      {
+        "index": 30,
+        "type": "tool_end",
+        "title": "compute_log_metrics",
+        "detail": ""
+      },
+      {
+        "index": 33,
+        "type": "react_step",
+        "title": "detect_log_anomalies",
+        "detail": "Need anomaly detection against thresholds and baseline."
+      },
+      {
+        "index": 34,
+        "type": "tool_start",
+        "title": "detect_log_anomalies",
+        "detail": ""
+      },
+      {
+        "index": 35,
+        "type": "tool_end",
+        "title": "detect_log_anomalies",
+        "detail": ""
+      },
+      {
+        "index": 38,
+        "type": "react_step",
+        "title": "retrieve_runbook",
+        "detail": "Need runbook context via RAG for likely causes and actions."
+      },
+      {
+        "index": 39,
+        "type": "tool_start",
+        "title": "retrieve_runbook",
+        "detail": ""
+      },
+      {
+        "index": 40,
+        "type": "tool_end",
+        "title": "retrieve_runbook",
+        "detail": ""
+      },
+      {
+        "index": 43,
+        "type": "react_step",
+        "title": "get_service_context",
+        "detail": "Need MCP service metadata for owner, SLO, dependencies, and deployments."
+      },
+      {
+        "index": 45,
+        "type": "mcp_end",
+        "title": "get_service_context",
+        "detail": ""
+      },
+      {
+        "index": 48,
+        "type": "react_step",
+        "title": "collect_evidence",
+        "detail": "Need evidence snippets tied to computed metrics."
+      },
+      {
+        "index": 51,
+        "type": "react_step",
+        "title": "finish",
+        "detail": "All required observations are available; generate final answer."
+      },
+      {
+        "index": 55,
+        "type": "validation_result",
+        "title": "validation_result",
+        "detail": ""
+      },
+      {
+        "index": 59,
+        "type": "validation_result",
+        "title": "validation_result",
+        "detail": ""
+      },
+      {
+        "index": 61,
+        "type": "final_output",
+        "title": "final_output",
+        "detail": "## Summary\n\n/api/login is failing because of a database migration. Immediate rollback is required."
+      }
+    ],
+    "createdAt": 1778950645.9662852,
+    "updatedAt": 1778950645.9662857
+  },
+  "ref_20260517_015739_normal-login-error-spike": {
+    "id": "ref_20260517_015739_normal-login-error-spike",
+    "mode": "fixture",
+    "status": "succeeded",
+    "fixtureId": "normal-login-error-spike",
+    "userInput": "지난 1시간 동안 /api/login endpoint에서 5xx 에러율이 평소보다 증가했는지 분석하고 근거를 알려주세요.",
+    "accessLogPath": "C:\\workspaces\\judge-agent\\.claude\\worktrees\\distracted-bohr-49f1af\\reference_agent\\weblog_agent\\fixtures\\access.log",
+    "useLlm": true,
+    "tracePath": "artifacts\\frontend-api\\reference-runs\\traces\\ref_20260517_015739_normal-login-error-spike.jsonl",
+    "reportPath": "artifacts\\frontend-api\\reference-runs\\reports\\ref_20260517_015739_normal-login-error-spike.md",
+    "eventCounts": {
+      "run_start": 1,
+      "instruction_snapshot": 1,
+      "node_start": 4,
+      "mcp_start": 2,
+      "mcp_end": 2,
+      "agent_components": 1,
+      "node_end": 4,
+      "edge_selected": 3,
+      "llm_skipped": 11,
+      "react_step": 10,
+      "observation": 9,
+      "tool_start": 6,
+      "tool_end": 6,
+      "validation_result": 2,
+      "final_output": 1,
+      "run_end": 1
+    },
+    "timelinePreview": [
+      {
+        "index": 4,
+        "type": "mcp_end",
+        "title": "tools/list",
+        "detail": ""
+      },
+      {
+        "index": 10,
+        "type": "react_step",
+        "title": "parse_user_request",
+        "detail": "Need to understand the user's target endpoint and metrics first."
+      },
+      {
+        "index": 13,
+        "type": "react_step",
+        "title": "read_log_file",
+        "detail": "Need raw access logs before computing evidence."
+      },
+      {
+        "index": 14,
+        "type": "tool_start",
+        "title": "read_log_file",
+        "detail": ""
+      },
+      {
+        "index": 15,
+        "type": "tool_end",
+        "title": "read_log_file",
+        "detail": ""
+      },
+      {
+        "index": 18,
+        "type": "react_step",
+        "title": "parse_access_log",
+        "detail": "Need structured log records for analysis."
+      },
+      {
+        "index": 19,
+        "type": "tool_start",
+        "title": "parse_access_log",
+        "detail": ""
+      },
+      {
+        "index": 20,
+        "type": "tool_end",
+        "title": "parse_access_log",
+        "detail": ""
+      },
+      {
+        "index": 23,
+        "type": "react_step",
+        "title": "filter_log_records",
+        "detail": "Need records scoped to the requested endpoint/status range."
+      },
+      {
+        "index": 24,
+        "type": "tool_start",
+        "title": "filter_log_records",
+        "detail": ""
+      },
+      {
+        "index": 25,
+        "type": "tool_end",
+        "title": "filter_log_records",
+        "detail": ""
+      },
+      {
+        "index": 28,
+        "type": "react_step",
+        "title": "compute_log_metrics",
+        "detail": "Need deterministic metrics from filtered records."
+      },
+      {
+        "index": 29,
+        "type": "tool_start",
+        "title": "compute_log_metrics",
+        "detail": ""
+      },
+      {
+        "index": 30,
+        "type": "tool_end",
+        "title": "compute_log_metrics",
+        "detail": ""
+      },
+      {
+        "index": 33,
+        "type": "react_step",
+        "title": "detect_log_anomalies",
+        "detail": "Need anomaly detection against thresholds and baseline."
+      },
+      {
+        "index": 34,
+        "type": "tool_start",
+        "title": "detect_log_anomalies",
+        "detail": ""
+      },
+      {
+        "index": 35,
+        "type": "tool_end",
+        "title": "detect_log_anomalies",
+        "detail": ""
+      },
+      {
+        "index": 38,
+        "type": "react_step",
+        "title": "retrieve_runbook",
+        "detail": "Need runbook context via RAG for likely causes and actions."
+      },
+      {
+        "index": 39,
+        "type": "tool_start",
+        "title": "retrieve_runbook",
+        "detail": ""
+      },
+      {
+        "index": 40,
+        "type": "tool_end",
+        "title": "retrieve_runbook",
+        "detail": ""
+      },
+      {
+        "index": 43,
+        "type": "react_step",
+        "title": "get_service_context",
+        "detail": "Need MCP service metadata for owner, SLO, dependencies, and deployments."
+      },
+      {
+        "index": 45,
+        "type": "mcp_end",
+        "title": "get_service_context",
+        "detail": ""
+      },
+      {
+        "index": 48,
+        "type": "react_step",
+        "title": "collect_evidence",
+        "detail": "Need evidence snippets tied to computed metrics."
+      },
+      {
+        "index": 52,
+        "type": "react_step",
+        "title": "finish",
+        "detail": "All required observations are available; generate final answer."
+      },
+      {
+        "index": 56,
+        "type": "validation_result",
+        "title": "validation_result",
+        "detail": ""
+      },
+      {
+        "index": 60,
+        "type": "validation_result",
+        "title": "validation_result",
+        "detail": ""
+      },
+      {
+        "index": 62,
+        "type": "final_output",
+        "title": "final_output",
+        "detail": "## Summary\n\nAnalyzed web logs for `/api/login` using a ReAct agent flow with tools, RAG, and MCP context. Request count was 80 and error rate was 15.00%.\n\n## Key Metrics\n\n- request_count: 80\n- error_count: 12\n- 5xx_count: 12\n- error_rate: 15.00%\n- p95_latency_ms: 1400\n\n## Anomalies\n\n- **error_rate_spike** (critical): error_rate=0.15 expected=0.05 — error_rate exceeded critical threshold\n- **latency_spike** (medium): p95_latency_ms=1400 expected=1000 — p95 latency exceeded warning threshold\n\n## Evidence\n\nRepresentative log lines:\n\n- `203.0.113.1 - - [13/May/2026:03:00:00 +0000] \"POST /api/login HTTP/1.1\" 500 512 \"-\" \"fixture-agent\" 1400`\n- `203.0.113.2 - - [13/May/2026:03:00:30 +0000] \"POST /api/login HTTP/1.1\" 500 512 \"-\" \"fixture-agent\" 1400`\n- `203.0.113.3 - - [13/May/2026:03:01:00 +0000] \"POST /api/login HTTP/1.1\" 500 512 \"-\" \"fixture-agent\" 1400`\n- `203.0.113.4 - - [13/May/2026:03:01:30 +0000] \"POST /api/login HTTP/1.1\" 500 512 \"-\" \"fixture-agent\" 1400`\n- `203.0.113.5 - - [13/May/2"
+      }
+    ],
+    "createdAt": 1778950659.6977122,
+    "updatedAt": 1778950659.6977127
   }
 }

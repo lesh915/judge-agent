@@ -5,7 +5,7 @@
       "name": "frontend",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "cwd": "frontend/app",
+      "cwd": "judgeagent/frontend/app",
       "port": 29173
     }
   ]

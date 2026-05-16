@@ -5,11 +5,11 @@ description = "Reference web log analysis agent for Judge Agent drift tests"
 requires-python = ">=3.9"
 
 [project.scripts]
-weblog-agent = "reference_agent.weblog_agent.cli:main"
-judge-agent-simple = "simple.judge_agent_simple.cli:main"
+weblog-agent = "judgeagent.reference.agent.weblog_agent.cli:main"
+judge-agent-simple = "judgeagent.backend.cli:main"
 
-[tool.setuptools]
-packages = ["reference_agent", "simple"]
+[tool.setuptools.packages.find]
+where = ["."]
 
 [project.optional-dependencies]
 agent = ["langgraph>=0.2", "langchain>=0.3", "langchain-core>=0.3", "langchain-openai>=0.2", "mcp>=1.0"]
