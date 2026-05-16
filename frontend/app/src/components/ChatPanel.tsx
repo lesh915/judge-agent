@@ -1,3 +1,4 @@
+import { useRef, useEffect } from 'react';
 import type { ChatMessage } from '../types/judge';
 import { Card, Input, Button, Typography, Tag, Space, Divider } from 'antd';
 import { SendOutlined, UserOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
@@ -11,6 +12,12 @@ type ChatPanelProps = {
 };
 
 export function ChatPanel({ messages, onSendMessage, isLoading }: ChatPanelProps) {
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
   const handleSend = (value: string) => {
     if (value.trim()) {
       onSendMessage(value);
@@ -95,8 +102,9 @@ export function ChatPanel({ messages, onSendMessage, isLoading }: ChatPanelProps
             )}
           </div>
         ))}
+        <div ref={messagesEndRef} />
       </div>
-      
+
       <div style={{ padding: '16px 24px', borderTop: '1px solid #f0f0f0', backgroundColor: '#fff' }}>
         <Input.Search
           placeholder="Type a command (e.g., /run) or ask a question..."

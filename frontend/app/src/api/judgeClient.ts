@@ -1,6 +1,6 @@
 import type { AnalysisSummary, ChatMessage, ConfigSnapshot, Finding, ReferenceRun } from '../types/judge';
 
-const BASE_URL = 'http://localhost:8000';
+const BASE_URL = 'http://localhost:19001';
 
 async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${BASE_URL}${path}`, {
