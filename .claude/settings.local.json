@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-Process -Name python,uvicorn,node -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object Id,Name,CommandLine)",
+      "PowerShell(Get-Process -Name python,uvicorn,node -ErrorAction SilentlyContinue)",
+      "PowerShell($port8000 = netstat -ano | findstr \":8000\" | findstr \"LISTENING\"; $port5173 = netstat -ano | findstr \":5173\" | findstr \"LISTENING\"; $port5174 = netstat -ano | findstr \":5174\" | findstr \"LISTENING\"; \"Port 8000: $port8000\"; \"Port 5173: $port5173\"; \"Port 5174: $port5174\")",
+      "Bash(python -m uvicorn simple.judge_agent_simple.api:app --reload --host 0.0.0.0 --port 8000)",
+      "Bash(npm run *)",
+      "Bash(curl -s http://localhost:19001/api/health)",
+      "Bash(git mv *)"
+    ]
+  }
+}
