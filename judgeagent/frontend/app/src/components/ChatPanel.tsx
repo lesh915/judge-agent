@@ -25,13 +25,13 @@ export function ChatPanel({ messages, onSendMessage, isLoading }: ChatPanelProps
   };
 
   return (
-    <Card bordered={false} bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <Card bordered={false} style={{ height: '100%' }} bodyStyle={{ padding: 0, display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
       <div style={{ padding: '16px 24px', borderBottom: '1px solid #f0f0f0' }}>
         <Title level={4} style={{ margin: 0 }}>Judge Agent Chat</Title>
         <Text type="secondary" style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Deterministic Evidence</Text>
       </div>
       
-      <div className="chat-list" style={{ flexGrow: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', backgroundColor: '#fafafa' }}>
+      <div className="chat-list" style={{ flexGrow: 1, minHeight: 0, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', backgroundColor: '#fafafa' }}>
         {messages.map((message) => (
           <div 
             key={message.id} 
