@@ -1,6 +1,13 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Dict, Optional
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).resolve().parents[1] / ".env", override=False)
+except ImportError:
+    pass
 
 from .api_models import (
     ApiError,
