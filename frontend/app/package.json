@@ -9,7 +9,9 @@
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
+    "@ant-design/icons": "^6.2.3",
     "@vitejs/plugin-react": "latest",
+    "antd": "^6.4.2",
     "react": "latest",
     "react-dom": "latest",
     "typescript": "latest",

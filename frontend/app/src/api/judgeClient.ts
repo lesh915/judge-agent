@@ -1,5 +1,99 @@
 import type { AnalysisSummary, ChatMessage, ConfigSnapshot, Finding, ReferenceRun } from '../types/judge';
 
+const BASE_URL = 'http://localhost:8000';
+
+async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const response = await fetch(`${BASE_URL}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    },
+  });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: response.statusText }));
+    throw new Error(error.message || 'API request failed');
+  }
+  return response.json();
+}
+
+export async function getConfig(): Promise<ConfigSnapshot> {
+  const data = await apiFetch<any>('/api/config');
+  return {
+    configDir: data.configDir,
+    adapter: data.appDefaults?.adapter || 'reference-weblog-jsonl',
+    chatMode: data.appDefaults?.chat_mode || 'deterministic-v2',
+    llmProvider: data.llmProfiles?.defaultProvider || 'none',
+    model: data.llmProfiles?.defaultModel || '',
+    metricCount: data.metrics?.count || 0,
+  };
+}
+
+export async function getFixtures(): Promise<any[]> {
+  const data = await apiFetch<any>('/api/reference/fixtures');
+  return data.fixtures || [];
+}
+
+export async function runReferenceAgent(fixtureId: string, useLlm: boolean = false): Promise<ReferenceRun> {
+  const data = await apiFetch<any>('/api/reference/runs', {
+    method: 'POST',
+    body: JSON.stringify({
+      mode: 'fixture',
+      fixtureId,
+      useLlm,
+    }),
+  });
+  const run = data.run;
+  return {
+    id: run.id,
+    fixture: run.fixtureId,
+    mode: run.mode,
+    status: run.status,
+    userInput: run.userInput,
+    tracePath: run.tracePath,
+    reportPath: run.reportPath,
+    eventCounts: run.eventCounts,
+    timeline: (run.timelinePreview || []).map((ev: any, idx: number) => ({
+      id: `ev-${idx}`,
+      step: idx + 1,
+      type: ev.type,
+      title: ev.title,
+      detail: ev.detail,
+    })),
+  };
+}
+
+export async function createAnalysis(referenceRunId: string, adapter: string): Promise<any> {
+  const data = await apiFetch<any>('/api/analyses', {
+    method: 'POST',
+    body: JSON.stringify({
+      source: { kind: 'reference-run', referenceRunId },
+      adapter,
+    }),
+  });
+  return data.analysis;
+}
+
+export async function createJudgeSession(analysisId: string, mode: string): Promise<any> {
+  const data = await apiFetch<any>('/api/judge/sessions', {
+    method: 'POST',
+    body: JSON.stringify({
+      analysisId,
+      mode,
+      sessionId: `session-${Date.now()}`,
+    }),
+  });
+  return data.session;
+}
+
+export async function sendJudgeMessage(sessionId: string, content: string): Promise<{ message: ChatMessage; session: any }> {
+  return apiFetch<{ message: ChatMessage; session: any }>(`/api/judge/sessions/${sessionId}/messages`, {
+    method: 'POST',
+    body: JSON.stringify({ content }),
+  });
+}
+
+// Keep mocks for fallback if needed or initial state
 export const mockReferenceRun: ReferenceRun = {
   id: 'ref-normal-login-error-spike-001',
   fixture: 'normal-login-error-spike',
@@ -14,100 +108,32 @@ export const mockReferenceRun: ReferenceRun = {
     validation_result: 1,
     final_output: 1,
   },
-  timeline: [
-    { id: 't1', step: 1, type: 'thought', title: 'Parse request scope', detail: 'User asked for /api/login 5xx error-rate analysis.' },
-    { id: 't2', step: 2, type: 'action', title: 'parse_user_request', detail: 'targetPath=/api/login, metric=error_rate' },
-    { id: 't3', step: 3, type: 'tool', title: 'compute_log_metrics', detail: 'request_count=80, error_rate=0.15, p95_latency=1400ms' },
-    { id: 't4', step: 4, type: 'rag', title: 'retrieve_runbook', detail: 'Retrieved login incident runbook and dependency hints.' },
-    { id: 't5', step: 5, type: 'mcp', title: 'get_service_context', detail: 'owner=identity-platform, dependencies=session-store, auth-db' },
-    { id: 't6', step: 6, type: 'validation', title: 'validate_findings', detail: 'Metrics, evidence, RAG, MCP, and output contract checked.' },
-    { id: 't7', step: 7, type: 'final', title: 'finalize report', detail: 'Markdown report emitted with confidence and limitations.' },
-  ],
+  timeline: [],
 };
-
-export const mockFindings: Finding[] = [
-  {
-    id: 'JD-001',
-    metric: 'validation_path_coverage',
-    category: 'LangGraph Flow',
-    severity: 'critical',
-    confidence: 0.98,
-    expected: 'validate_findings node and validation_result events must run before final output.',
-    actual: 'Validation path was missing or explicitly skipped in the drift fixture.',
-    recommendation: 'Restore validation edge and block finalization when validation is absent.',
-    evidence: ['node_start sequence=[initialize_agent, react_agent, finalize]', 'validation_result_count=0', 'validation_skipped_edge=true'],
-    runId: 'ref-normal-login-error-spike-001',
-    priority: 4,
-  },
-  {
-    id: 'JD-002',
-    metric: 'target_endpoint_consistency',
-    category: 'Tool Use',
-    severity: 'high',
-    confidence: 0.96,
-    expected: 'All tool arguments and metric paths should use /api/login.',
-    actual: 'Trace used /api/payment in a metric top_paths result.',
-    recommendation: 'Ground filter/query arguments in parsed targetPath and add argument validation.',
-    evidence: ['metrics.top_paths contains /api/payment, expected /api/login'],
-    runId: 'ref-normal-login-error-spike-001',
-    priority: 2,
-  },
-  {
-    id: 'JD-003',
-    metric: 'rag_context_presence_and_usage',
-    category: 'Context / Retrieval',
-    severity: 'medium',
-    confidence: 0.85,
-    expected: 'RAG runbook retrieval should occur for incident analysis.',
-    actual: 'RAG context was missing from the final report.',
-    recommendation: 'Call retrieve_runbook before final report and separate RAG from measured evidence.',
-    evidence: ['No tool_end(retrieve_runbook) event found.'],
-    runId: 'ref-normal-login-error-spike-001',
-    priority: 6,
-  },
-];
 
 export const mockSummary: AnalysisSummary = {
   sessionId: 'weblog-drift-review',
-  runCount: 3,
-  gateCounts: { pass: 1, warning: 1, block: 1 },
-  severityCounts: { low: 0, medium: 1, high: 1, critical: 1 },
-  topFindings: mockFindings,
+  runCount: 0,
+  gateCounts: { pass: 0, warning: 0, block: 0 },
+  severityCounts: { low: 0, medium: 0, high: 0, critical: 0 },
+  topFindings: [],
 };
-
-export const mockMessages: ChatMessage[] = [
-  {
-    id: 'm1',
-    role: 'user',
-    content: '왜 block이야?',
-    createdAt: '22:14',
-  },
-  {
-    id: 'm2',
-    role: 'assistant',
-    content: 'block의 직접 원인은 critical finding인 validation_path_coverage입니다. final output 전에 validate_findings node와 validation_result가 실행되어야 하는데, trace에서는 validation path가 누락되거나 skip되었습니다.',
-    createdAt: '22:14',
-    focusedFindingId: 'JD-001',
-    focusedMetric: 'validation_path_coverage',
-    toolCalls: [{ name: 'explain_gate', status: 'success', summary: 'block 1개, warning 1개 확인' }],
-  },
-];
 
 export const mockConfig: ConfigSnapshot = {
   configDir: 'simple/config',
   adapter: 'reference-weblog-jsonl',
   chatMode: 'deterministic-v2',
-  llmProvider: 'ollama',
-  model: 'qwen3.5:latest',
-  metricCount: 35,
+  llmProvider: 'none',
+  model: '',
+  metricCount: 0,
 };
 
 export function getMockReviewData() {
   return {
     referenceRun: mockReferenceRun,
     summary: mockSummary,
-    findings: mockFindings,
-    messages: mockMessages,
+    findings: [],
+    messages: [],
     config: mockConfig,
   };
 }

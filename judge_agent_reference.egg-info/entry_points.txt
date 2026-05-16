@@ -1,0 +1,3 @@
+[console_scripts]
+judge-agent-simple = simple.judge_agent_simple.cli:main
+weblog-agent = reference_agent.weblog_agent.cli:main

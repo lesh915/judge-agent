@@ -1,0 +1,14 @@
+Metadata-Version: 2.4
+Name: judge-agent-reference
+Version: 0.1.0
+Summary: Reference web log analysis agent for Judge Agent drift tests
+Requires-Python: >=3.9
+Provides-Extra: agent
+Requires-Dist: langgraph>=0.2; extra == "agent"
+Requires-Dist: langchain>=0.3; extra == "agent"
+Requires-Dist: langchain-core>=0.3; extra == "agent"
+Requires-Dist: langchain-openai>=0.2; extra == "agent"
+Requires-Dist: mcp>=1.0; extra == "agent"
+Provides-Extra: api
+Requires-Dist: fastapi>=0.110; extra == "api"
+Requires-Dist: uvicorn>=0.27; extra == "api"

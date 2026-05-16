@@ -1,0 +1,9 @@
+pyproject.toml
+judge_agent_reference.egg-info/PKG-INFO
+judge_agent_reference.egg-info/SOURCES.txt
+judge_agent_reference.egg-info/dependency_links.txt
+judge_agent_reference.egg-info/entry_points.txt
+judge_agent_reference.egg-info/requires.txt
+judge_agent_reference.egg-info/top_level.txt
+reference_agent/__init__.py
+simple/__init__.py

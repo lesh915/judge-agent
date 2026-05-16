@@ -4,7 +4,7 @@
     "adapter": "reference-weblog-jsonl",
     "session_dir": "artifacts/simple-judge/sessions",
     "session_id": "default",
-    "chat_mode": "deterministic",
+    "chat_mode": "hybrid",
     "fail_on": "critical",
     "llm_provider": "auto"
   },

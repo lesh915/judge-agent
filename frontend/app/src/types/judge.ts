@@ -18,6 +18,7 @@ export type ReferenceRun = {
   fixture?: string;
   mode: ReferenceRunMode;
   status: ReferenceRunStatus;
+  userInput?: string;
   tracePath?: string;
   reportPath?: string;
   eventCounts: Record<string, number>;
@@ -52,14 +53,20 @@ export type ToolCall = {
   summary: string;
 };
 
+export type ChatAction = {
+  label: string;
+  command: string;
+};
+
 export type ChatMessage = {
   id: string;
-  role: 'user' | 'assistant' | 'tool';
+  role: 'user' | 'assistant' | 'system' | 'tool';
   content: string;
   createdAt: string;
   toolCalls?: ToolCall[];
   focusedFindingId?: string;
   focusedMetric?: string;
+  actionButtons?: ChatAction[];
 };
 
 export type ConfigSnapshot = {
