@@ -28,12 +28,13 @@ from .api_services import (
 )
 
 try:  # Optional dependency; installed with `pip install -e '.[api]'`.
-    from fastapi import FastAPI, Query
+    from fastapi import FastAPI, Query, Request
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import JSONResponse
 except Exception:  # pragma: no cover - exercised only when optional deps missing.
     FastAPI = None  # type: ignore
     Query = None  # type: ignore
+    Request = None  # type: ignore
     CORSMiddleware = None  # type: ignore
     JSONResponse = None  # type: ignore
 
@@ -78,7 +79,8 @@ def create_app():
         return list_reference_fixtures()
 
     @app.post("/api/reference/runs")
-    def api_reference_runs(payload: Dict[str, Any]):
+    async def api_reference_runs(request: Request):
+        payload = await request.json()
         return run_reference_agent(reference_run_request(payload))
 
     @app.get("/api/reference/runs")
@@ -94,7 +96,8 @@ def create_app():
         return get_reference_trace(run_id, offset=offset, limit=limit, event_type=type)
 
     @app.post("/api/analyses")
-    def api_create_analysis(payload: Dict[str, Any]):
+    async def api_create_analysis(request: Request):
+        payload = await request.json()
         return create_analysis(analysis_request(payload))
 
     @app.get("/api/analyses")
@@ -106,7 +109,8 @@ def create_app():
         return get_analysis(analysis_id)
 
     @app.post("/api/judge/sessions")
-    def api_create_judge_session(payload: Dict[str, Any]):
+    async def api_create_judge_session(request: Request):
+        payload = await request.json()
         return create_judge_session(judge_session_request(payload))
 
     @app.get("/api/judge/sessions")
@@ -118,7 +122,8 @@ def create_app():
         return get_judge_session(session_id)
 
     @app.post("/api/judge/sessions/{session_id}/messages")
-    def api_send_judge_message(session_id: str, payload: Dict[str, Any]):
+    async def api_send_judge_message(session_id: str, request: Request):
+        payload = await request.json()
         return send_judge_message(session_id, judge_message_request(payload))
 
     return app
