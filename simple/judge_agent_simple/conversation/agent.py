@@ -59,12 +59,12 @@ class ToolBasedConversationAgent:
         finding_id = self._finding_id_from_text(q)
         if any(token in q for token in INTENTS["compare"]):
             return [{"tool": "compare_runs", "arguments": {}}]
+        if any(token in q for token in INTENTS["gate"]):
+            return [{"tool": "explain_gate", "arguments": {}}]
         if any(token in q for token in INTENTS["evidence"]):
             return [{"tool": "get_evidence", "arguments": {"query": text, "metric": metric, "finding_id": finding_id}}]
         if any(token in q for token in INTENTS["recommendation"]):
             return [{"tool": "recommend_fix", "arguments": {"query": text, "metric": metric, "finding_id": finding_id}}]
-        if any(token in q for token in INTENTS["gate"]):
-            return [{"tool": "explain_gate", "arguments": {}}]
         if metric or finding_id:
             return [{"tool": "get_finding", "arguments": {"query": text, "metric": metric, "finding_id": finding_id}}]
         if any(token in q for token in INTENTS["runs"]):

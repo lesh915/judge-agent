@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import datetime
 import json
 from collections import Counter
 from pathlib import Path
@@ -333,6 +334,7 @@ def send_judge_message(session_id: str, request: JudgeMessageRequest, store: Opt
         "id": make_id("msg"),
         "role": "assistant",
         "content": response,
+        "createdAt": datetime.datetime.now().strftime("%I:%M %p"),
         "focusedFindingId": state.focus.get("finding_id"),
         "focusedMetric": state.focused_metric,
         "toolCalls": [call.to_dict() for call in state.tool_calls[-3:]],
